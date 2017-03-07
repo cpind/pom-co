@@ -1,0 +1,2 @@
+#conversion to csv achieved with xlsx2csv
+xlsx2csv --all Stats\ MPG-saison4MPG.xlsx > Stats\ MPG-saison4MPG.csv
