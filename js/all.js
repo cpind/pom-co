@@ -40,14 +40,17 @@ $(function(){
     
     $searchTeams.on('input',  function(){
 
-        var value = $searchTeams.val().toLowerCase(),
-            $teams = $('.teams-drawer-content>.teams-drawer-teams');
-            $result = $('.teams-drawer-content').children('.teams-drawer-search-result');
+        var rawValue = $searchTeams.val(),
+            value = rawValue.toLowerCase(),
+            $teams = $('.teams-drawer-content>.teams-drawer-teams'),
+            $result = $('.teams-drawer-content').children('.teams-drawer-search-result'),
+            $addTeam = $('.teams-drawer-content .js-add-team');
         
         if( !value || value === "" ) {
             //reset placeholder
             $searchTeams.val("");
             $teams.show();
+            $addTeam.show();
             $result.hide();
             return;
         }
@@ -65,13 +68,50 @@ $(function(){
         $ul.empty();
         //filter result
         $li = $teams.find('li.compact-team-tile').clone();
+        var searchValues = prepareSearchValue(value);
         $li.filter(function(index, el){
-            var name = $(el).find('.compact-team-tile-link-text-name').text();
-            return name.toLowerCase().indexOf(value) > -1;
+            var raw_name = $(el).find('.compact-team-tile-link-text-name').text(),
+                name = raw_name.toLowerCase(),
+                match = false;
+            for( var i = 0; i < searchValues.length; ++i ) {
+                if( !(name.indexOf(searchValues[i]) > -1) ) {
+                    return false;
+                }
+            }
+            return true;
         }).appendTo($ul);
         $content.appendTo($result);
+
+        var $addTeamWithName = $addTeam.clone();
+        $addTeamWithName.show();
+        $addTeamWithName.find('a').text("Create team name \""+ rawValue +"\"");
+        $addTeamWithName.attr('data-name', rawValue);
+        $addTeamWithName.appendTo($result);
+        $addTeamWithName.removeClass('js-add-team');
+        $addTeamWithName.addClass('js-add-team-with-name');
         $result.show();
         $teams.hide();
+        $addTeam.hide();
+    });
+
+    function prepareSearchValue(value) {
+        var vals = value.split(' '),
+            res = [];
+        for( var i = 0; i < vals.length; ++i ) {
+            var val = vals[i];
+            if( vals[i] === ' ' ) continue;
+            res.push(val);
+        }
+        return res;
+    }
+
+    $('#createTeamModal').on('show.bs.modal', function(event){
+        var button = $(event.relatedTarget);
+        var name = button.data('name');
+        if( !name || name === "") return;
+        var modal = $(this);
+        modal.find('#inputTeamName').val(name);
+        
     })
     
     updateListMembers();
