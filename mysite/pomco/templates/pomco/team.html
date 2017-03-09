@@ -1,5 +1,6 @@
-{% include 'pomco/base.html'%}
+{% extends 'pomco/base.html'%}
 
+{% block content %}
 <h2>team view</h2>
 
 <p>{{team.team_name}}</p>
@@ -32,3 +33,4 @@
 </div>
 
 {% endif %}
+{% endblock %}

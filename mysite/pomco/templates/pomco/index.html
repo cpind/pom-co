@@ -1,7 +1,7 @@
-{% include 'pomco/base.html'%}
-<div class="container">
+{% extends 'pomco/base.html'%}
 
-  
+{% block content %}
+
   <h1>Welcome to pomco</h1>
 
   {% if team_list %}
@@ -43,4 +43,5 @@
   {% endif %}
 
   {% include "pomco/create_team.html"%}
-</div>
+
+{% endblock %}
