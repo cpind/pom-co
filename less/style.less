@@ -1,0 +1,172 @@
+@import "../lib/bootstrap-3.3.7/less/bootstrap.less";
+
+@compact-team-tile-height: 36px;
+@compact-team-tile-background-color:@brand-info;
+
+.players-select{
+    visibility:hidden;
+}
+
+.show{
+    visibility:visible;
+}
+
+
+body {
+    padding-top: 70px;
+}
+
+/* center the logo in the topbar */
+.navbar-header {
+    transform: translateX(-50%);
+    left: 50%;
+    position: absolute;
+}
+
+
+/*  ----- THE TOPBAR ---- */
+
+.topbar{
+    
+}
+
+.teams-drawer{
+    background: #fff;
+    box-shadow: 0 3px 6px rgba(0,0,0,.4);
+    border-radius: 0 3px 3px 0;
+    display: none;
+    overflow: hidden;
+    position: fixed;
+    left: 0;
+    width: 280px;
+    top: @navbar-height + @navbar-padding-vertical;
+    z-index: 60;
+    &.is-shown{
+        display:block;
+    }
+}
+
+.teams-drawer-content{
+    margin: 6px 4px 6px 6px;
+    overflow-y:auto;
+    overflow-x:hidden;
+    &>input.form-control{
+        width:98%;
+    }
+}
+
+
+
+ul{
+    list-style-type: none;
+    padding-left:0px;
+}
+
+.compact-team-tile{
+    padding-bottom: 4px;
+    padding-right: 4px;
+    position:relative;
+}
+
+.compact-team-tile-wrapper{
+    background-color: @gray-lighter;
+    border-radius:3px;
+    position:relative;
+}
+
+.compact-team-tile-link{
+    height: @compact-team-tile-height;
+    display:flex;
+    text-decoration: none!important;
+    position:relative;
+}
+
+.compact-team-tile-link-text-name{
+    font-weight: 700;
+    flex-grow:1;
+    flex-shrink:1;
+    padding: 2px 0px 2px 10px;
+    margin-top: 6px;
+}
+
+.compact-team-tile-link-remove{
+    flex-grow:0;
+    flex-shrink:0;
+    margin-top:9px;
+    margin-right:4px;
+    width:0;
+    overflow-x:hidden;
+    transition-duration:.15s;
+}
+
+.compact-team-tile:hover{
+    .compact-team-tile-link-remove{
+        width:18px;
+    }
+}
+
+.compact-team-tile-background-pos(){
+    position:absolute;
+    width:100%;
+    height:100%;
+    border-radius:3px;
+}
+
+.compact-team-tile-background{
+    .compact-team-tile-background-pos;
+    background-color: @compact-team-tile-background-color;
+}
+
+.compact-team-tile-fade{
+    .compact-team-tile-background-pos;
+    background-color:rgba(255,255,255,0.88);
+}
+
+.compact-team-tile-thumbnail{
+    flex:0 0 auto;
+    width: @compact-team-tile-height;
+    height: @compact-team-tile-height;
+    background-color:@compact-team-tile-background-color;
+    border-bottom-left-radius:3px;
+    border-top-left-radius:3px;
+}
+
+.sidebar-section-header{
+    margin:16px 30px 10px 8px;
+}
+
+.sidebar-section-header-title{
+    color:@gray-light;
+}
+
+/* .u-fancy-scrollbar, pre { */
+/*     -webkit-overflow-scrolling: touch; */
+/*     -webkit-transform: translate3d(0,0,0); */
+/* } */
+
+.u-fancy-scrollbar{
+
+    &::-webkit-scrollbar{
+        height: 9px;
+        width: 9px;
+    }
+
+    &::-webkit-scrollbar-track-piece {
+        background: #D6DADC;
+        &:vertical{
+            &:start{
+                border-radius:5px 5px 0 0;
+            }
+            &:end{
+                border-radius: 0 0 5px 5px;
+            }
+        }
+    }
+
+     &::-webkit-scrollbar-thumb{
+        background:#C4C9CC;
+        border-radius: 5px;
+        display:block;
+        height:50px;
+    }
+}

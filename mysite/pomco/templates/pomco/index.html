@@ -1,17 +1,23 @@
+{% include 'pomco/base.html'%}
+<div class="container">
+
+  
 <h1>Welcome to pomco</h1>
+
 {% if team_list %}
-    <ul>
-    {% for team in team_list %}
-    <li><a href="{% url 'team' team.id %}">{{team.id}}:  {{ team.team_name }}</a></li>
-    <form action="{% url 'delete' %}" method="POST">
-      {% csrf_token %}
-      <input type="hidden" value="{{team.id}}" name="team_id"/>
-      <input type="submit" value="Delete"/>
-      </form>
-    {% endfor %}
-    </ul>
-    <a class="js-add-group" href="#">Create new team[TODO]</a>
+
+<a class="js-create-team"
+   href="#">
+
+  Create new team[TODO]
+
+</a>
+
 {% else %}
-    <p>No teams are available.</p>
-    {% endif %}
-    {% include "pomco/create_team.html"%}
+
+<p>No teams are available.</p>
+
+{% endif %}
+
+{% include "pomco/create_team.html"%}
+</div>

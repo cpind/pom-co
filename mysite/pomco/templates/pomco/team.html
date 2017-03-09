@@ -1,3 +1,34 @@
+{% include 'pomco/base.html'%}
+
 <h2>team view</h2>
 
 <p>{{team.team_name}}</p>
+
+<ul class="js-list-members" data-members = {{team.members}}>
+</ul>
+
+<a href="#"
+   class="js-add-player"
+   data-members = {{team.members}}
+   data-team-id = {{team.id}}
+  Ajouter un joueur... </a>
+
+{% if editable %}
+   
+<div class="players-select">
+  
+  <input type="button"
+	 class="js-validate-players"
+	 value="ok"
+	 data-url = "{% url 'team' team.id %}"/>
+  
+  <div class="js-players-list"></div>
+  
+  <input type="button"
+	 class="js-validate-players"
+	 value="ok"
+	 data-url = "{% url 'team' team.id %}"/>
+  
+</div>
+
+{% endif %}

@@ -1,11 +1,46 @@
-<head>
-  {% load static %}
-  <script src="{% static "pomco/jquery-3.1.1.js"%}"></script>
-  <script src="{% static "pomco/js.cookie.js"%}"></script>
-  <script src="{% static "pomco/all.js"%}"></script>
-  <script> window.pomcodata = "{% static "pomco/data.csv" %}" </script>
-  <link href="{% static "pomco/style.css"%}" rel="stylesheet" type="text/css"></link>
-</head>
-<body>
-  <div class="pop-over"></div>
-</body>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    {% load static %}
+
+    <!-- dependencies -->
+    <script src="{% static 'pomco/jquery-3.1.1.js'%}"></script>
+    <script src="{% static 'pomco/js.cookie.js'%}"></script>
+    <script src="{% static 'js/bootstrap.js'%}"></script>
+
+    <!-- app -->
+    <script src="{% static "pomco/all.js"%}"></script>
+
+    <!-- data url -->
+    <script> window.pomcodata = "{% static "pomco/data.csv" %}" </script>
+
+    <!-- style -->
+    <link href="{% static 'less/style.css'%}"
+          rel="stylesheet"
+          type="text/css"></link>
+
+  </head>
+
+  <body>
+
+    {% include 'pomco/topbar.html' %}
+    {% include 'pomco/teams-drawer.html'%}
+    <div
+       class="modal"
+       id="createTeamModal"
+       role="dialog">
+      <div class="modal-dialog"
+           role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">Create Team</h4>
+          </div>
+          <div class="modal-body">
+            {% include "pomco/create_team.html"%}
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
