@@ -2,6 +2,7 @@
   <div class="teams-drawer">
     <div class="teams-drawer-content u-fancy-scrollbar">
       <input class="form-control js-search-teams" type="text" placeholder="Find teams by name..."/>
+      <div class="teams-drawer-search-result" style="display:none"></div>
       <div class="teams-drawer-teams">
         <div class="sidebar-section-header">
           <span class="sidebar-section-header-title">Custom Teams</span>
@@ -12,7 +13,7 @@
         </div>
         {% include 'pomco/teams_list.html' with team_list=standard_teams_list%}
       </div>
-      <div class="teams-drawer-teams" data-toggle="modal" data-target="#createTeamModal">
+      <div data-toggle="modal" data-target="#createTeamModal">
         <a>Create new team...</a>
       </div>
     </div>

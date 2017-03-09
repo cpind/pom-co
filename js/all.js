@@ -8,7 +8,8 @@ $(function(){
         players = [],
         $playserSelect = $('.players-select'),
         $playersList = $('.js-players-list'),
-        currentTeam = null;
+        currentTeam = null,
+        $searchTeams = $('.js-search-teams');
 
     $.ajax({
         type: "GET",
@@ -36,7 +37,42 @@ $(function(){
         $('.teams-drawer').removeClass('is-shown');
     });
 
-//    $('js-search-teams').
+    
+    $searchTeams.on('input',  function(){
+
+        var value = $searchTeams.val().toLowerCase(),
+            $teams = $('.teams-drawer-content>.teams-drawer-teams');
+            $result = $('.teams-drawer-content').children('.teams-drawer-search-result');
+        
+        if( !value || value === "" ) {
+            //reset placeholder
+            $searchTeams.val("");
+            $teams.show();
+            $result.hide();
+            return;
+        }
+        
+        //generate search result
+        $result.empty();
+        $content = $teams.clone();
+        $content.show();
+        //removes section headers
+        $content.find('.sidebar-section-header').remove();
+        //keep only first ul
+        $content.find('ul:not(:first)').remove();
+        //clear ul items
+        $ul = $content.find('.sidebar-teams-list');
+        $ul.empty();
+        //filter result
+        $li = $teams.find('li.compact-team-tile').clone();
+        $li.filter(function(index, el){
+            var name = $(el).find('.compact-team-tile-link-text-name').text();
+            return name.toLowerCase().indexOf(value) > -1;
+        }).appendTo($ul);
+        $content.appendTo($result);
+        $result.show();
+        $teams.hide();
+    })
     
     updateListMembers();
     adjustDrawerHeight();
