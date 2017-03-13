@@ -1,6 +1,6 @@
 
 style:
-	lessc --ru less/style.less > less/style.css
+	lessc --ru src/less/style.less > src/less/style.css
 
 run:
 	python mysite/manage.py runserver

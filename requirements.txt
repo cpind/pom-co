@@ -6,3 +6,6 @@ packaging==16.8
 pyparsing==2.2.0
 pyserial==2.7
 six==1.10.0
+gunicorn==19.6.0
+Django==1.9.7
+whitenoise==2.0.6
