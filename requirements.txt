@@ -1,0 +1,8 @@
+appdirs==1.4.3
+django-realtime==1.1
+httplib2==0.9
+numpy==1.9.2
+packaging==16.8
+pyparsing==2.2.0
+pyserial==2.7
+six==1.10.0
