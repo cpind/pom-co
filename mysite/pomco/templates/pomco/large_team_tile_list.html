@@ -1,0 +1,7 @@
+<ul class="large-team-list">
+  {% for team in team_list %}
+  <li>
+    {% include 'pomco/large_team_tile.html' with team=team %}
+  </li>
+  {% endfor %}
+</ul>

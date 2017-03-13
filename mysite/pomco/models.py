@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 import json
 
 
@@ -6,9 +7,12 @@ class Team(models.Model):
 
     #name of the team
     team_name = models.CharField(max_length=200)
-    
+
     #json list of team members
     members = models.CharField(max_length=10000, default="[]")
+
+    auth_user_model = settings.AUTH_USER_MODEL
+    user = models.ForeignKey(auth_user_model)
 
     def __str__(self):
         """returns a string representation of the team"""

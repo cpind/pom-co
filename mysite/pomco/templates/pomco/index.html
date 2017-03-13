@@ -2,46 +2,27 @@
 
 {% block content %}
 
-  <h1>Welcome to pomco</h1>
+<h1>Welcome to pomco</h1>
 
-  {% if team_list %}
-  <div class="main-team-list">
-  <ul class="large-team-list">
-    {% for team in team_list %}
-    <li class="large-team-tile">
-      <div class="large-team-tile-wrapper">
-        <div class="large-team-tile-background"></div>
-        <div class="large-team-tile-fade"></div>
-        <a class="large-team-tile-link"
-           href="{% url 'team' team.id %}">
-          <span class="large-team-tile-info">
-            <span class="large-team-tile-name">{{team.team_name}}</span>
-          </span>
-          <span class="large-team-tile-aggregate">
-            <div class="js-team-aggregate"
-                 data-members="{{team.members}}"
-                 ></div>
-          </span>
-        </a>
-      </div>
-    </li>
-    {% endfor %}
-  </ul>
-  </div>
+{% if team_list %}
 
-  <a class="js-create-team"
-     href="#">
+<div class="main-team-list">
+  {% include 'pomco/large_team_tile_list.html' %}
+</div>
 
-    Create new team[TODO]
+<a class="js-create-team"
+   href="#">
 
-  </a>
+  Create new team[TODO]
 
-  {% else %}
+</a>
 
-  <p>No teams are available.</p>
+{% else %}
 
-  {% endif %}
+<p>No teams are available.</p>
 
-  {% include "pomco/create_team.html"%}
+{% endif %}
+
+{% include "pomco/create_team.html"%}
 
 {% endblock %}

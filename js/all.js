@@ -217,17 +217,36 @@ $(function(){
     function getPlayerUID(player){
         return player.nom + '(' + player.team + ')';                              
     }
+
+
+    function updateHtmlList(members){
+        $ul = $('.large-team-list');
+        //        $ul.
+        //TODO: here
+    }
     
-    dataReadyDef.done(function(){
-    $('.js-team-aggregate').each(function(index, el){
+    function drawAggregate(index, el){
+        
+        //if no element call it on js-team-aggregate elements
+        if( !el ) {
+            return $('.js-team-aggregate').each(drawAggregate);
+        }
+        
         var members = el.dataset.members,
+            detail = el.dataset.detail,
             svg = d3.select(el).append("svg"),
             nDays = 38,
             w = 380,
             h = 120;
-
-        days = getMeansNoteByDay(members);
-                
+        
+        days = [getMeansNoteByDay(members)];
+        
+        if (detail) {
+            members = JSON.parse(members);
+            Array.prototype.push.apply(days, members);
+            updateHtmlList(members);
+        }
+        
         var x = d3.scaleLinear()
 	    .domain([0, nDays])
 	    .range([0, w]);
@@ -237,9 +256,26 @@ $(function(){
 	    .range([0, h]);
         
         svg.attr("width", 380)
-            .attr("height", 120);
-        svg.selectAll("rect")
+            .attr("height", 120 * days.length);
+
+        var season = svg.selectAll('g')
             .data(days)
+            .enter().append('g')
+            .attr('class', 'season')
+            .attr('width', 380)
+            .attr('height', 120)
+            .attr('transform', function(d, i){return "translate(0, " + (i * 120) + ")";});
+        ;
+        
+        season.selectAll("rect")
+            .data(function(season){
+                if( typeof season !== 'string') {
+                    return season;
+                }
+                var member = season;
+                var player = getPlayers([member])[0];
+                return player.notes.map(function(note){return note.note;})
+            })
             .enter().append("rect")
             .attr("class", "day")
             .attr("transform", function(d, i){
@@ -247,15 +283,18 @@ $(function(){
             })
             .attr("height",  function(d){
                 var val = d;
-                return y(val)-5;
+                return y(val);
             })
-            .attr("y", function(d){return h - y(d) - 5})            
+            .attr("y", function(d){return h - y(d)})
             .attr("width", 8)
             .style("fill", "blue")
-            ;
+        ;
 
         var g = svg.selectAll(".day")
-    });});
+
+    }
+    
+    dataReadyDef.done(drawAggregate);
 
     function getMeansNoteByDay(members){
 

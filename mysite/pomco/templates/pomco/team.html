@@ -3,7 +3,7 @@
 {% block content %}
 <h2>team view</h2>
 
-<p>{{team.team_name}}</p>
+{% include 'pomco/large_team_tile_list.html' with team_list=detail_team_list %}
 
 <ul class="js-list-members" data-members = {{team.members}}>
 </ul>

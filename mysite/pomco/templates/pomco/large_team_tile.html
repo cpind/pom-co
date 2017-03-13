@@ -1,0 +1,18 @@
+<div class="large-team-tile">
+  <div class="large-team-tile-wrapper">
+    <div class="large-team-tile-background"></div>
+    <div class="large-team-tile-fade"></div>
+    <a class="large-team-tile-link"
+       href="{% url 'team' team.id %}">
+      <span class="large-team-tile-info">
+        <span class="large-team-tile-name">{{team.team_name}}</span>
+      </span>
+      <span class="large-team-tile-aggregate">
+        <div class="js-team-aggregate"
+             data-members="{{team.members}}"
+             data-detail="{{detail}}"
+             ></div>
+      </span>
+    </a>
+  </div>
+</div>

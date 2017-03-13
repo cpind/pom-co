@@ -1,8 +1,12 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.template import loader
 from django.core.urlresolvers import reverse
 from django.core import serializers
+from django.contrib.auth.models import User
+from django.contrib.auth import login
+from django.core.mail import send_mail
+from django.contrib.auth import views as auth_views
 
 import json
 
@@ -42,7 +46,9 @@ def team(request, team_id):
         return update_team(request, team)
     context = {
         'team':team,
-        'editable':True
+        'editable':True,
+        'detail_team_list':[team],
+        'detail':True
     }
     context.update(_get_teams_lists())
     return render(request, "pomco/team.html", context)
@@ -62,3 +68,17 @@ def delete(request):
 def members(request, team_id):
     team = get_object_or_404(Team, pk=team_id)
     return JsonResponse(team.members)
+
+def signup(request):
+    if request.method == 'POST':
+        return createUser(request)
+    print("rendering signup")
+    return render(request, "registration/signup.html")
+
+def createUser(request):
+    new_user = User.objects.create_user(request.POST['email'], request.POST['email'], request.POST['password'])
+    login(request, new_user)
+    return redirect('index')
+
+# def login(request):
+#     return auth_views.login(request, next='index')
