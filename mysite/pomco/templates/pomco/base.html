@@ -26,6 +26,13 @@
 
     {% include 'pomco/topbar.html' %}
     {% include 'pomco/teams_drawer.html'%}
+    {% if user.is_email_confirmed == False%}
+    <div class="alert alert-warning">
+      Please confirm, your email address:{{user.email}}
+      <a href="{% url 'send_email_confirmation_mail' %} class="js-send-email-confirmation-mail">Resend email.</a>
+    </div>
+    {% endif %}
+    
     <div
        class="modal"
        id="createTeamModal"

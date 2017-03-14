@@ -1,16 +1,26 @@
+from django.core import serializers
+from django.core.mail import send_mail
+from django.core.urlresolvers import reverse
+
+from django.contrib.auth import login, authenticate
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import views as auth_views
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.template import loader
-from django.core.urlresolvers import reverse
-from django.core import serializers
-from django.contrib.auth.models import User
-from django.contrib.auth import login
-from django.core.mail import send_mail
-from django.contrib.auth import views as auth_views
+from django.utils.crypto import get_random_string
 
+import sendgrid
+from sendgrid.helpers.mail import *
+
+import os
 import json
+import logging
 
-from .models import Team
+from .models import Team, MyUser
+
+logger = logging.getLogger(__name__)
 
 def index(request):
     context = _get_teams_lists()
@@ -58,13 +68,13 @@ def create(request):
     t.team_name = request.POST['team_name']
     t.save()
     return HttpResponseRedirect(reverse('index'))
-        
+
 def delete(request):
     team_id = request.POST['team_id']
     t = Team.objects.get(pk=team_id)
     t.delete()
     return HttpResponseRedirect(reverse('index'))
-    
+
 def members(request, team_id):
     team = get_object_or_404(Team, pk=team_id)
     return JsonResponse(team.members)
@@ -72,13 +82,60 @@ def members(request, team_id):
 def signup(request):
     if request.method == 'POST':
         return createUser(request)
-    print("rendering signup")
     return render(request, "registration/signup.html")
 
 def createUser(request):
-    new_user = User.objects.create_user(request.POST['email'], request.POST['email'], request.POST['password'])
-    login(request, new_user)
+    username = request.POST['email']
+    password = request.POST['password']
+    new_user = MyUser.objects.create_user(username, password)
+    send_email_confirmation(new_user)
+    user = authenticate(username=username, password=password)
+    login(request, user)
     return redirect('index')
 
-# def login(request):
-#     return auth_views.login(request, next='index')
+def send_email_confirmation(user):
+    logger.info("send confirmation email to:" + user.email)
+    sg = sendgrid.SendGridAPIClient(apikey=os.environ.get('SENDGRID_API_KEY'))
+    confirmation_token = get_random_string(length=32)
+    url = reverse("confirm_email") + "?confirmation_token=" + confirmation_token
+    data = {
+        "personalizations":[
+            {
+                "to":[
+                    {
+                        "email": user.email
+                    }
+                ],
+            "subject":"New Compo Email Address"
+            }
+        ],
+        "from":{
+            "email":"do-not-reply@compo.com"
+        },
+        "content":[
+            {
+                "type":"text/plain",
+                "value":"Confirm Email, follow url to confirm email: " + url + "."
+            }
+        ]
+    }
+    response = sg.client.mail.send.post(request_body=data)
+    user.confirmation_token = confirmation_token
+    user.save()
+
+def confirm_email(request):
+    """ handle request for email confirmation """
+    confirmation_token = request.GET['confirmation_token']
+    try:
+        user = MyUser.objects.get(confirmation_token=confirmation_token)
+        user.is_email_confirmed = True
+        user.save()
+    except MyUser.DoesNotExist:
+        return render(request, "unable_to_confirm_mail.html")
+    return redirect('index')
+
+@login_required
+def send_email_confirmation_mail(request):
+    send_email_confirmation(request.user)
+    return redirect('index')
+

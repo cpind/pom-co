@@ -13,5 +13,6 @@ urlpatterns = [
     url(r'^signup$', views.signup, name='signup'),
     url(r'^login$', auth_views.login, {'extra_context':{'next':'/'}}, name='login'),
     url('^', include('django.contrib.auth.urls')),
-
+    url('^confirm', views.confirm_email, name="confirm_email"),
+    url('^sendEmailConfirmation', views.send_email_confirmation_mail, name="send_email_confirmation_mail"),
 ]
