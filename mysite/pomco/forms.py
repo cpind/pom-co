@@ -1,9 +1,17 @@
 from django import forms
+from django.core.urlresolvers import reverse
 from django.forms import ModelForm
 from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
+from django.utils.crypto import get_random_string
+
+import sendgrid
+from sendgrid.helpers.mail import *
 
 from .models import MyUser
 
+import logging
+import os
+logger = logging.getLogger(__name__)
 
 def setup_widget_attr_class(form):
     for field_name, field in form.fields.items():
@@ -17,9 +25,15 @@ class PomcoBaseModelForm(ModelForm):
 
 class MyUserForm(PomcoBaseModelForm):
 
+    def __init__(self, *args, **kwargs):
+        super(MyUserForm, self).__init__(*args, **kwargs)
+        self.fields['full_name'].label = "Name"
+        self.fields['full_name'].required = False
+    
     class Meta:
         model = MyUser
         fields = ['email', 'full_name']
+
 
 class PomcoBaseForm(forms.Form):
     
@@ -57,3 +71,18 @@ class MyPasswordResetForm(PasswordResetForm):
     def __init__(self, *args, **kwargs):
         super(MyPasswordResetForm, self).__init__(*args, **kwargs)
         setup_widget_attr_class(self)    
+
+class MyUserCreationForm(PomcoBaseModelForm):
+
+    password = forms.CharField(label="Password", widget=forms.PasswordInput)
+
+    class Meta:
+        model = MyUser
+        fields = ('email',)
+
+    def save(self, commit=True):
+        user = super(MyUserCreationForm, self).save(commit=False)
+        user.set_password(self.cleaned_data["password"])
+        if commit:
+            user.save()
+        return user

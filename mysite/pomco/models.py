@@ -76,10 +76,12 @@ class MyUser(AbstractBaseUser):
     )
     full_name = models.CharField(
         max_length=255,
-        null=False,
+        blank=True,
         default="")
     is_email_confirmed = models.BooleanField(default=False)
-    confirmation_token = models.CharField(max_length=32, null=True)
+    confirmation_token = models.CharField(
+        max_length=32,
+        blank=True)
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
 
@@ -114,3 +116,10 @@ class MyUser(AbstractBaseUser):
         "Is the user a member of staff?"
         # Simplest possible answer: All admins are staff
         return self.is_admin
+
+    @property
+    def get_display_name(self):
+        "get full_name if user defined one, email otherwise."
+        if self.full_name:
+            return self.full_name
+        return self.email

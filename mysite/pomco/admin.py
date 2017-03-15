@@ -42,6 +42,12 @@ class UserChangeForm(forms.ModelForm):
     """
     password = ReadOnlyPasswordHashField()
 
+    def __init__(self, *args, **kwargs):
+        super(UserChangeForm, self).__init__(*args, **kwargs)
+        full_name = self.fields['full_name']
+        full_name.label = "Name"
+        full_name.required = False
+    
     class Meta:
         model = MyUser
         fields = ('email', 'password', 'is_active', 'is_admin', 'is_email_confirmed', 'confirmation_token', 'full_name')
