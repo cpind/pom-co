@@ -5,13 +5,18 @@
   {% csrf_token %}
 
   <div class="form-group">
+    <label for="inputEmail">Name</label>
+    {{form.full_name}}
+  </div>
+  
+  <div class="form-group">
     <label for="inputEmail">Email address</label>
-    <input type="email" class="form-control" id="inputEmail" placeholder="Email" name="email">
+    {{form.email}}
   </div>
 
   <div class="form-group">
     <label for="inputPassword">Password</label>
-    <input type="password" class="form-control" id="inputPassword" placeholder="Password" name="password">
+    {{form.password}}
   </div>
   <button type="submit" class="btn btn-default">Submit</button>  
 </form>
