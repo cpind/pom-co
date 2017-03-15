@@ -40,7 +40,8 @@ $(function(){
         $('.teams-drawer').removeClass('is-shown');
     });
 
-    
+
+    //update content of the drawer according to the search input
     $searchTeams.on('input',  function(){
 
         var rawValue = $searchTeams.val(),
