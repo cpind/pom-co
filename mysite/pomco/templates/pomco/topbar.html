@@ -31,7 +31,27 @@
       </a>
     </div>
     {% endif %}
-    
+    <ul class="navbar-form navbar-right">
+      <li class="dropdown">
+        <a href="#" 
+           class="dropdown-toggle btn btn-default"
+           data-toggle="dropdown"
+           role="button"
+           aria-haspopup="true"
+           aria-expanded="false">
+          {{user.full_name}}
+        </a>
+        <ul class="dropdown-menu">
+          <li>
+            <a href="{% url 'profile'%}">Profile</a>
+          </li>
+          <li role="separator" class="divider"></li>
+          <li>
+            <a href="{% url 'logout'%}"></a>
+          </li>
+          </ul>
+      </li>
+    </ul>
 
   </div>
 </nav>
