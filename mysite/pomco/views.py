@@ -9,7 +9,7 @@ from django.contrib.auth import views as auth_views
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.template import loader
-from django.utils.crypto import get_random_string
+
 
 import sendgrid
 from sendgrid.helpers.mail import *
@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 def index(request):
     context = _get_teams_lists()
+#    print("email confirmed: " + request.user.is_email_confirmed)
     return render(request, "pomco/index.html", context)
 
 def update_team(request, team):
@@ -81,48 +82,17 @@ def members(request, team_id):
     return JsonResponse(team.members)
 
 def signup(request):
+    u = MyUserCreationForm()
     if request.method == 'POST':
-        return createUser(request)
-    return render(request, "registration/signup.html")
+        u = MyUserCreationForm(request.POST)
+        if u.is_valid():
+            u.save()
+            user = authenticate(username=u.cleaned_data.get('email'),
+                                password=u.cleaned_data.get('password'))
+            login(request, user)
+            return redirect('index')
+    return render(request, "registration/signup.html", {'form':u})
 
-def createUser(request):
-    username = request.POST['email']
-    password = request.POST['password']
-    new_user = MyUser.objects.create_user(username, password)
-    send_email_confirmation(new_user)
-    user = authenticate(username=username, password=password)
-    login(request, user)
-    return redirect('index')
-
-def send_email_confirmation(user):
-    logger.info("send confirmation email to:" + user.email)
-    sg = sendgrid.SendGridAPIClient(apikey=os.environ.get('SENDGRID_API_KEY'))
-    confirmation_token = get_random_string(length=32)
-    url = reverse("confirm_email") + "?confirmation_token=" + confirmation_token
-    data = {
-        "personalizations":[
-            {
-                "to":[
-                    {
-                        "email": user.email
-                    }
-                ],
-            "subject":"New Compo Email Address"
-            }
-        ],
-        "from":{
-            "email":"do-not-reply@compo.com"
-        },
-        "content":[
-            {
-                "type":"text/plain",
-                "value":"Confirm Email, follow url to confirm email: " + url + "."
-            }
-        ]
-    }
-    response = sg.client.mail.send.post(request_body=data)
-    user.confirmation_token = confirmation_token
-    user.save()
 
 def confirm_email(request):
     """ handle request for email confirmation """
@@ -146,6 +116,7 @@ def profile(request, password_form = None):
     if request.method == 'POST' and password_form is None:
         print(password_form)
         form = MyUserForm(request.POST, instance=user)
+        print("profile is valid : " + str(form.is_valid()))
         if form.is_valid():
             form.save()
     else:
@@ -171,3 +142,15 @@ def logout_view(request):
     print("logging out")
     return redirect('index')
 
+def send_email_confirmation(user):
+    logger.info("send confirmation email to:" + user.email)
+    sg = sendgrid.SendGridAPIClient(apikey=os.environ.get('SENDGRID_API_KEY'))
+    confirmation_token = get_random_string(length=32)
+    url = reverse("confirm_email") + "?confirmation_token=" + confirmation_token
+    to_email = Email(user.email)
+    subject = "New Compo Email Address"
+    from_email = Email("do-not-reply@compo.com")
+    content = Content("text/plain","Confirm Email, follow url to confirm email: " + url + ".")
+    mail = Mail(from_email, subject, to_email, content)
+    response = sg.client.mail.send.post(request_body=mail.get())
+    user.confirmation_token = confirmation_token
