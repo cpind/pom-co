@@ -29,27 +29,12 @@
     {% if user.is_email_confirmed == False%}
     <div class="alert alert-warning">
       Please confirm, your email address:{{user.email}}
-      <a href="{% url 'send_email_confirmation_mail' %} class="js-send-email-confirmation-mail">Resend email.</a>
+      <a href="{% url 'send_email_confirmation_mail' %}" class="js-send-email-confirmation-mail">Resend email.</a>
     </div>
     {% endif %}
     
-    <div
-       class="modal"
-       id="createTeamModal"
-       role="dialog">
-      <div class="modal-dialog"
-           role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            <h4 class="modal-title">Create Team</h4>
-          </div>
-          <div class="modal-body">
-            {% include "pomco/create_team.html"%}
-          </div>
-        </div>
-      </div>
-    </div>
+    {% include 'pomco/create_team_modal.html' %}
+    
     <div class="container">
       {% block content %}{% endblock %}
     </div>
