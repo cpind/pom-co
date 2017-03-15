@@ -6921,3 +6921,6 @@ ul {
   list-style-type: none;
   padding-left: 0px;
 }
+.alert {
+  margin-top: -20px;
+}

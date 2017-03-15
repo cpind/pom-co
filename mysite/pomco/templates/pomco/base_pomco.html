@@ -10,7 +10,7 @@
 {% if user.is_email_confirmed == False%}
 
 <div class="alert alert-warning">
-  Please confirm, your email address:{{user.email}}
+  Please confirm your email address
   <a href="{% url 'send_email_confirmation_mail' %}" class="js-send-email-confirmation-mail">Resend email.</a>
 </div>
 {% endif %}
