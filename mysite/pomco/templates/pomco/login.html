@@ -1,0 +1,36 @@
+{% extends 'pomco/base_registration.html' %}
+
+{% load pomco_extras %}
+
+{% block title %}
+Log in to Pomco
+{% endblock %}
+
+{% block form %}
+<form action="{% url 'login' %}" method="POST">
+  {%csrf_token%}
+  {% with form=form %}
+
+  <div class="form-group">
+    <label for="{{field.id_for_label}}">Email</label>
+    {{form.username}}
+  </div>
+
+  <div class="form-group">
+    <label for="{{field.id_for_label}}">Password</label>
+    {{form.password}}
+  </div>
+
+  {% endwith %}
+  {% if error_message %}
+  <p class="text-danger">{{error_message}}</p>
+  {% endif %}
+  
+  <input type="submit" value="Submit" class="btn btn-default"/>
+  <span>Forgot your password?
+    <a href="{% url 'password_reset' %}" >Reset it</a>
+  </span>
+</form>
+
+
+{% endblock %}

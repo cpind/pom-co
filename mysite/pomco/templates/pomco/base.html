@@ -23,18 +23,7 @@
   </head>
 
   <body>
-
-    {% include 'pomco/topbar.html' %}
-    {% include 'pomco/teams_drawer.html'%}
-    {% if user.is_email_confirmed == False%}
-    <div class="alert alert-warning">
-      Please confirm, your email address:{{user.email}}
-      <a href="{% url 'send_email_confirmation_mail' %}" class="js-send-email-confirmation-mail">Resend email.</a>
-    </div>
-    {% endif %}
-    
-    {% include 'pomco/create_team_modal.html' %}
-    
+    {% block topbar_content %}{% endblock %}
     <div class="container">
       {% block content %}{% endblock %}
     </div>

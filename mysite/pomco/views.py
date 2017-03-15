@@ -2,7 +2,7 @@ from django.core import serializers
 from django.core.mail import send_mail
 from django.core.urlresolvers import reverse
 
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import views as auth_views
 
@@ -19,6 +19,7 @@ import json
 import logging
 
 from .models import Team, MyUser
+from .forms import *
 
 logger = logging.getLogger(__name__)
 
@@ -137,5 +138,36 @@ def confirm_email(request):
 @login_required
 def send_email_confirmation_mail(request):
     send_email_confirmation(request.user)
+    return redirect('index')
+
+@login_required
+def profile(request, password_form = None):
+    user = request.user
+    if request.method == 'POST' and password_form is None:
+        print(password_form)
+        form = MyUserForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+    else:
+        form = MyUserForm(instance=user)
+
+    if password_form is None:
+        password_form = PasswordForm()
+
+    return render(request, "pomco/profile.html", {'form': form, 'password_form':password_form})
+
+@login_required
+def change_password(request):
+    form = None    
+    if request.method == 'POST':
+        form = PasswordForm(request.POST)
+        if form.is_valid():
+            password = form.cleaned_data.get("password1")
+            request.user.set_password(password)
+    return profile(request, password_form=form)
+
+def logout_view(request):
+    logout(request)
+    print("logging out")
     return redirect('index')
 

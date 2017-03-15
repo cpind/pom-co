@@ -144,3 +144,5 @@ DATABASES['default'].update(db_from_env)
 
 AUTH_USER_MODEL = 'pomco.MyUser'
 LOGIN_URL='login'
+LOGIN_REDIRECT_URL = 'index'
+
