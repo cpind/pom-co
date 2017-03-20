@@ -220,11 +220,6 @@ $(function(){
     }
 
 
-    function updateHtmlList(members){
-        $ul = $('.large-team-list');
-        //        $ul.
-        //TODO: here
-    }
     
     function drawAggregate(index, el){
         
@@ -244,8 +239,10 @@ $(function(){
         
         if (detail) {
             members = JSON.parse(members);
+            if( members.indexOf('*') > -1 ) {
+                members = players.map(getPlayerUID);
+            }
             Array.prototype.push.apply(days, members);
-            updateHtmlList(members);
         }
         
         var x = d3.scaleLinear()
@@ -316,6 +313,12 @@ $(function(){
     }
 
     function getPlayers(members){
+
+        //if '*' returns all players
+        if( members.indexOf('*') > -1 ) {
+            return players;
+        }
+        
         var res = [];
         for(var i = 0; i < players.length; ++i){
             var player = players[i],

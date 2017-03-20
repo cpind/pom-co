@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import views as auth_views
 
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse, Http404
 from django.template import loader
 
 
@@ -35,27 +35,48 @@ def update_team(request, team):
     return JsonResponse(team.to_dict())
 
 def team_all(request, team_id):
+    team = _team_all()
     context = {
-        'team':{'team_name':'All', 'members':'["*"]'},
-        'editable':False
+        'team': team,
+        'detail': True,
+        'detail_team_list': [team],
+        'editable': False
     }
     context.update(_get_teams_lists())
     return render(request, "pomco/team.html", context)
 
-def _get_teams_lists():
+def _team_all():
     return {
-        'team_list':Team.objects.all(),
-        'standard_teams_list': [{
-            'team_name':'All',
-            'id':'*',
-            'no_editable':True
-        }]
+        'id':'all',
+        'team_name':'All',
+        'members':'["*"]',
+        'url': reverse('team', kwargs={'team_id':'all'}),
+        'type':'standard', 
     }
 
+def _get_teams_lists():
+    return {
+        'team_list': Team.objects.all(),
+        'standard_teams_list': [_team_all()],
+    }
+
+def _get_team(id):
+    return {
+        'all':_team_all()
+    }.get(id)
+
 def team(request, team_id):
-    team = get_object_or_404(Team, pk=team_id)
-    if request.method == 'POST':
+    if team_id.startswith('$'):
+        team_id = team_id[1:]
+        team = get_object_or_404(Team, pk=team_id)
+    else:
+        team = _get_team(team_id)
+        if team is None:
+            raise Http404()
+        
+    if request.method == 'POST' and team.type == 'custom':
         return update_team(request, team)
+    
     context = {
         'team':team,
         'editable':True,
@@ -68,6 +89,7 @@ def team(request, team_id):
 def create(request):
     t = Team()
     t.team_name = request.POST['team_name']
+    t.user = request.user
     t.save()
     return HttpResponseRedirect(reverse('index'))
 

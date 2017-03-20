@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth.models import (
     BaseUserManager, AbstractBaseUser
 )
+from django.core.urlresolvers import reverse
 import json
 
 
@@ -34,6 +35,12 @@ class Team(models.Model):
 
     def to_json(self):
         return json.dumps(self.to_dict())
+
+    def url(self):
+        return reverse('team', kwargs={'team_id': '$' + str(self.id)})
+
+    def type(self):
+        return 'custom'
 
 
 class MyUserManager(BaseUserManager):

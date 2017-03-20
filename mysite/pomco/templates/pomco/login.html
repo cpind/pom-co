@@ -7,6 +7,11 @@ Log in to Pomco
 {% endblock %}
 
 {% block form %}
+
+{% if form.errors %}
+<p>Your username and password didn't match. Please try again.</p>
+{% endif %}
+
 <form action="{% url 'login' %}" method="POST">
   {%csrf_token%}
   {% with form=form %}
@@ -27,6 +32,7 @@ Log in to Pomco
   {% endif %}
   
   <input type="submit" value="Submit" class="btn btn-default"/>
+  <input type="hidden" name="next" value="{{ next }}" />
   <span>Forgot your password?
     <a href="{% url 'password_reset' %}" >Reset it</a>
   </span>
