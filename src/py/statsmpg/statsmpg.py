@@ -104,7 +104,7 @@ def _are_same_player(player, other):
         if other[prop] != player[prop]:
             return False
     return True
-    
+   
     
 def _get_or_create_player(player):
     for p in players:
@@ -317,8 +317,6 @@ def _dump_note(note):
 
     return res
 
-    
-        
 def parseNote(note_str):
     """
 parse note such as 2, 2:4/, 2:(-1)/4, '<', 'Bl.' and so on.
@@ -380,7 +378,7 @@ def xlsx_to_csv(filename):
     wb = openpyxl.load_workbook(filename, data_only=True)
     sh = wb.get_active_sheet()
     output = io.StringIO()
-    c = csv.writer(output)
+    c = csv.writer(output, lineterminator="\n")
     i = 1
     for sh in wb.worksheets:
         output.write("-------- " + str(i) + " - " + sh.title + "\n")
