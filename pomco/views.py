@@ -17,6 +17,7 @@ from sendgrid.helpers.mail import *
 import os
 import json
 import logging
+import subprocess
 
 from .models import Team, MyUser
 from .forms import *
@@ -99,9 +100,30 @@ def delete(request):
     t.delete()
     return HttpResponseRedirect(reverse('index'))
 
+
 def members(request, team_id):
     team = get_object_or_404(Team, pk=team_id)
     return JsonResponse(team.members)
+
+
+def _statspath(stats):
+    if stats in ['l1mpg', 'l1lequipe', 'plmpg']:
+        return '{}/{}/{}'.format('statsl1mpg', stats, "data.csv")
+    return None
+
+
+def stats(request, stats):
+    branch = "master"
+    path = _statspath(stats)
+    if path is None:
+        raise Http404()
+    completeprocess = subprocess.run(
+        ["git", "show","{}:{}".format(branch, path)],
+        stdout=subprocess.PIPE,
+        encoding="utf-8",
+    )
+    return HttpResponse(completeprocess.stdout, content_type='text/csv')
+    
 
 def signup(request):
     u = MyUserCreationForm()

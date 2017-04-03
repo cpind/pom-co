@@ -13,15 +13,18 @@ import logging
 import os
 logger = logging.getLogger(__name__)
 
+
 def setup_widget_attr_class(form):
     for field_name, field in form.fields.items():
         field.widget.attrs['class'] = 'form-control'
+
 
 class PomcoBaseModelForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(PomcoBaseModelForm, self).__init__(*args, **kwargs)
         setup_widget_attr_class(self)
+
 
 class MyUserForm(PomcoBaseModelForm):
 
@@ -40,6 +43,7 @@ class PomcoBaseForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super(PomcoBaseForm, self).__init__(*args, **kwargs)
         setup_widget_attr_class(self)
+
 
 class PasswordForm(PomcoBaseForm):
 
@@ -62,15 +66,19 @@ class PasswordForm(PomcoBaseForm):
 
 class MyAuthenticationForm(AuthenticationForm):
     """ Needed to override the widget default class attr """
+
     def __init__(self, *args, **kwargs):
         super(MyAuthenticationForm, self).__init__(*args, **kwargs)
         setup_widget_attr_class(self)    
     
+
 class MyPasswordResetForm(PasswordResetForm):
     """ Needed to override the widget default class attr """
+
     def __init__(self, *args, **kwargs):
         super(MyPasswordResetForm, self).__init__(*args, **kwargs)
         setup_widget_attr_class(self)    
+
 
 class MyUserCreationForm(PomcoBaseModelForm):
 

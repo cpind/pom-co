@@ -11,9 +11,9 @@
 
     <!-- app -->
     <script src="{% static "js/all.js"%}"></script>
-
+    
     <!-- data url -->
-    <script> window.pomcodata = "{% static "pomco/data.csv" %}" </script>
+    <script> window.pomcodata = "{% url 'stats' stats='l1mpg' %}" </script>
 
     <!-- style -->
     <link href="{% static 'less/style.css'%}"

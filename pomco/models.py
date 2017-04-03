@@ -1,16 +1,15 @@
-"""
-credits for user customization: https://docs.djangoproject.com/en/1.9/topics/auth/customizing/#a-full-example
-"""
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import (
     BaseUserManager, AbstractBaseUser
 )
 from django.core.urlresolvers import reverse
+from django.utils import timezone
 import json
 
 
 class Team(models.Model):
+    """Team model"""
 
     #name of the team
     team_name = models.CharField(max_length=200)
@@ -130,3 +129,40 @@ class MyUser(AbstractBaseUser):
         if self.full_name:
             return self.full_name
         return self.email
+
+
+class StatsMPG(models.Model):
+
+    players_csv =  models.TextField()
+    teams_csv = models.TextField()
+    season = models.IntegerField(default=1)
+    validated = models.BooleanField(default=False)
+    date_created = models.DateTimeField(auto_now_add=True)
+    last_modified = models.DateTimeField(auto_now=True)
+    name = models.CharField(max_length=200, unique=False)
+    day = models.IntegerField(default=1)
+    bitly = models.CharField(max_length=128, blank=True)
+    driveid = models.CharField(max_length=128, blank=True)
+    filename = models.CharField(max_length=128, blank=True)
+
+    #leagues
+    L1 = 'L1'
+    PL = 'PL'
+    LEAGUE_CHOICES = ((L1, 'League 1'), (PL, 'Premier League'))
+    league = models.CharField(
+        max_length=2,
+        choices=LEAGUE_CHOICES,
+        default=L1,)
+    
+    #notations
+    MPG = "MPG"
+    LEQUIPE = "LEQUIPE"
+    NOTATION_CHOICES = ((MPG, "Mon Petit Gazon"), (LEQUIPE, "L'Equipe"))
+    notation = models.CharField(
+        max_length=8,
+        choices=NOTATION_CHOICES,
+        default=MPG,
+    )
+
+    def __str__(self):
+        return "{} {} {} {} {}".format(self.name, self.season, self.league, self.notation, self.date_created)

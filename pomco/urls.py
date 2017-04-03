@@ -10,6 +10,7 @@ urlpatterns = [
     url(r'^delete$', views.delete, name='delete'),
     url(r'^t/(?P<team_id>.+)/$', views.team, name='team'),
     url(r'^(?P<team_id>[0-9]+)/members$', views.members, name='members'),
+    url(r'^stats/(?P<stats>[a-z0-9]+)', views.stats, name='stats'),
     url(r'^signup$', views.signup, name='signup'),
     #credits: http://stackoverflow.com/questions/4643884/how-do-i-extend-the-django-login-form
     url(r'^login$', auth_views.login

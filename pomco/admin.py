@@ -1,10 +1,12 @@
 from django import forms
 from django.contrib import admin
 from django.contrib.auth.models import Group
-from pomco.models import MyUser
+from pomco.models import MyUser, StatsMPG
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
 # Register your models here.
+import pystatsmpg
+
 
 class UserCreationForm(forms.ModelForm):
     """A form for creating new users. Includes all the required
@@ -59,6 +61,7 @@ class UserChangeForm(forms.ModelForm):
         return self.initial["password"]
 
 
+
 class UserAdmin(BaseUserAdmin):
     # The forms to add and change user instances
     form = UserChangeForm
@@ -85,8 +88,65 @@ class UserAdmin(BaseUserAdmin):
     ordering = ('email',)
     filter_horizontal = ()
 
+
+
+
 # Now register the new UserAdmin...
 admin.site.register(MyUser, UserAdmin)
 # ... and, since we're not using Django's built-in permissions,
 # unregister the Group model from admin.
 admin.site.unregister(Group)
+
+class MyModelChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return "StatsMPG: " + obj.name
+    
+class StatsMPGCreationForm(forms.ModelForm):
+    """
+A form for creating new StatsMPG. 
+    """
+
+    class Meta:
+        model = StatsMPG
+        fields = ('name', )
+
+    statsmpg = forms.FileField(required = True)
+    updatestats = MyModelChoiceField(queryset=StatsMPG.objects.all(), required = False, to_field_name="name")
+
+    def save(self, commit=True):
+        statsmpg = super(StatsMPGCreationForm, self).save(commit=False)
+        xlsx_file = self.cleaned_data.get('statsmpg')
+        base_stats = self.cleaned_data.get('updatestats')
+        if base_stats is not None:
+            teams = base_stats.teams_csv
+            players = base_stats.players_csv
+            pystatsmpg.update(players = players, teams = teams)
+        pystatsmpg.update_xlsx(xlsx_file)
+        teams, players = pystatsmpg.dump()
+        statsmpg.teams_csv = teams
+        statsmpg.players_csv = players
+        if commit:
+            statsmpg.save()
+        return statsmpg
+    
+
+class StatsMPGAdmin(admin.ModelAdmin):
+    """
+    Allow creation of StatsMPG
+    """
+
+    add_form = StatsMPGCreationForm
+    list_display = ('id', 'league', 'season', 'notation', 'name', 'day', 'validated', 'date_created', 'last_modified')
+
+    def get_form(self, request, obj=None, **kwargs):
+        """
+        Use a special form during creation
+        """
+        defaults = {}
+        if obj is None:
+            defaults['form'] = self.add_form
+        defaults.update(kwargs)
+        return super().get_form(request, obj, **defaults)
+    
+
+admin.site.register(StatsMPG, StatsMPGAdmin)
