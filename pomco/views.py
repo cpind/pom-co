@@ -108,7 +108,7 @@ def members(request, team_id):
 
 def _statspath(stats):
     if stats in ['l1mpg', 'l1lequipe', 'plmpg']:
-        return '{}/{}/{}'.format('statsl1mpg', stats, "data.csv")
+        return '{}/{}/{}'.format('pomco/statsl1mpg', stats, "data.csv")
     return None
 
 
