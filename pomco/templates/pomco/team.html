@@ -1,18 +1,19 @@
 {% extends 'pomco/base_pomco.html'%}
 
 {% block content %}
-<h2>team view</h2>
+<div class="row">
+<div class="col-md-8 col-md-offset-2">
+  <div class="js-team-view js-team-aggregate" data-members='{{team.members}}'></div>
+</div>
+</div>
 
-{% include 'pomco/large_team_tile_list.html' with team_list=detail_team_list %}
-
-<ul class="js-list-members" data-members = {{team.members}}>
-</ul>
+<!-- {% include 'pomco/large_team_tile_list.html' with team_list=detail_team_list %} -->
 
 <a href="#"
    class="js-add-player"
-   data-members = {{team.members}}
+   data-members = '{{team.members}}'
    data-team-id = {{team.id}}>
-  Ajouter un joueur... </a>
+  Add a player... </a>
 
 {% if editable %}
    
@@ -21,14 +22,14 @@
   <input type="button"
 	 class="js-validate-players"
 	 value="ok"
-	 data-url = "{% url 'team' team.id %}"/>
+	 data-url = "{{team.url}}"/>
   
   <div class="js-players-list"></div>
   
   <input type="button"
 	 class="js-validate-players"
 	 value="ok"
-	 data-url = "{% url 'team' team.id %}"/>
+	 data-url = "{{team.url}}"/>
   
 </div>
 

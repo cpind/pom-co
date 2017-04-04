@@ -31,6 +31,7 @@ def index(request):
 
 def update_team(request, team):
     #todo update other fields if provided
+    print("update team")
     team.members = request.POST['members']
     team.save()
     return JsonResponse(team.to_dict())
@@ -66,6 +67,7 @@ def _get_team(id):
         'all':_team_all()
     }.get(id)
 
+
 def team(request, team_id):
     if team_id.startswith('$'):
         team_id = team_id[1:]
@@ -74,10 +76,8 @@ def team(request, team_id):
         team = _get_team(team_id)
         if team is None:
             raise Http404()
-        
-    if request.method == 'POST' and team.type == 'custom':
+    if request.method == 'POST' and type(team) == Team:
         return update_team(request, team)
-    
     context = {
         'team':team,
         'editable':True,
@@ -87,12 +87,14 @@ def team(request, team_id):
     context.update(_get_teams_lists())
     return render(request, "pomco/team.html", context)
 
+
 def create(request):
     t = Team()
     t.team_name = request.POST['team_name']
     t.user = request.user
     t.save()
     return HttpResponseRedirect(reverse('index'))
+
 
 def delete(request):
     team_id = request.POST['team_id']

@@ -13,7 +13,6 @@
     <label for="{{form.full_name.id_for_label}}">Name:</label>
     {{form.full_name}}
   </div>
-  
   <div class="form-group">
     <label for="{{form.email.id_for_label}}">Email:</label>
     {{form.email}}
@@ -21,21 +20,16 @@
   <p class="text-danger">{{form|one_error}}</p>
   <input type="submit" value="Submit" class="btn btn-default"/>
 </form>
-
 <h2>Un meilleur mot de passe</h1>
-
 <form action="{%url 'change_password'%}" method="POST">
   {%csrf_token%}
-
   {% for field in password_form %}
   <div class="form-group">
     <label for="{{field.id_for_label}}">{{field.label}}</label>
     {{field}}
   </div>
   {% endfor %}
-    
   <p class="text-danger">{{password_form|one_error}}</p>
-  
   <input type="submit" value="Submit" class="btn btn-default"/>
 </form>
 </div>

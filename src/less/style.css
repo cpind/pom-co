@@ -6924,3 +6924,27 @@ ul {
 .alert {
   margin-top: -20px;
 }
+.y.axis line {
+  stroke: white;
+  stroke-opacity: 0.2;
+}
+.y.axis path {
+  display: none;
+}
+.y.axis .zero line {
+  stroke: black;
+  stroke-opacity: 1;
+}
+rect.day {
+  fill: blue;
+}
+/* removes button outline */
+.btn:focus,
+.btn:active,
+.btn:active:focus,
+.btn.active:focus,
+.btn.focus,
+.btn:active.focus,
+.btn.active.focus {
+  outline: none;
+}

@@ -118,27 +118,8 @@ $(function(){
         
     })
     
-    updateListMembers();
     adjustDrawerHeight();
 
-    function updateListMembers(data){
-        var $list = $('.js-list-members');
-        if( $list.length < 1 ) {
-            return;
-        }
-        $list.empty();
-        if( !data ) {
-            data = $list[0].dataset.members;
-        }
-        members = JSON.parse(data);
-        for(var i = 0; i < members.length; ++i){
-            var member = members[i];
-            $list.append(
-                '<li>'
-                    + member
-                    + '</li>');
-        }
-    }
 
     $(window).resize(adjustDrawerHeight);
 
@@ -169,7 +150,6 @@ $(function(){
             data:{members:JSON.stringify(members)}
         }).done(function(data){
             //clear the list
-            updateListMembers(data.members);
             $playersList.empty();
             $playserSelect.removeClass('show');
             currentTeam = data;
@@ -178,29 +158,22 @@ $(function(){
     });
     
     $('.js-add-player').on('click', function(event){
-
         var $target = event.target,
             jsonMembers = $target.dataset.members,
             teamIs = event.target.dataset.teamId;
-
         if( currentTeam ){
             jsonMembers = currentTeam.members;
         }
-        
         var members = JSON.parse(jsonMembers);
-        
         $div = $playersList;
         //clear the list, just-in-case
         $div.empty();
         $list = $('<ul></ul>');
         $div.append($list);
-
         for( var i = 0; i < players.length; ++i){
-
             var player = players[i],
                 value = getPlayerUID(player),//player.nom + '('+player.team+')',
                 checked = members.indexOf(value) > -1 ? 'checked=true' : '';
-            
             $list.append(
                 '<li>'
                     + '<input type="checkbox"'
@@ -211,68 +184,96 @@ $(function(){
                     + '<span class="team">' + player.team + '</span>'
                     + '</li>')
         }
-
         $playserSelect.addClass('show');
     });
+
 
     function getPlayerUID(player){
         return player.nom + '(' + player.team + ')';                              
     }
 
 
-    
-    function drawAggregate(index, el){
-        
-        //if no element call it on js-team-aggregate elements
-        if( !el ) {
-            return $('.js-team-aggregate').each(drawAggregate);
-        }
-        
+    function drawTeamView(){
+        var $el = $('.js-team-view');
+        drawAggregate(0, $el[0])
+    }
+
+
+//    dataReadyDef.done(drawTeamView);
+    //    dataReadyDef.done(drawAggregate);
+
+
+    $('.js-team-aggregate').each(function(index, el){
         var members = el.dataset.members,
-            detail = el.dataset.detail,
+            detail = el.dataset.detail || true;
+        if( detail == "false")
+            detail = false;
+        $.when(dataReadyDef).done(function(){
+            drawAggregate(el, {
+                members: members,
+                detail: detail,
+                height: 50,
+                width:$(el).width()
+            });
+        });
+    });
+
+    
+    function drawAggregate(el, opt){
+        //if no element call it on js-team-aggregate elements
+        var members = opt.members,
+            detail = opt.detail,
             svg = d3.select(el).append("svg"),
             nDays = 38,
-            w = 380,
-            h = 120;
-        
-        days = [getMeansNoteByDay(members)];
-        
+            w = opt.width || 380,
+            h = opt.height || 120,
+            titleWidth = 100,
+            noteswidth = function(){
+                return w - titleWidth;
+            };
+        report_cards = [{
+            name:"Team",
+            notes:getMeansNoteByDay(members)
+        }];
         if (detail) {
             members = JSON.parse(members);
             if( members.indexOf('*') > -1 ) {
                 members = players.map(getPlayerUID);
             }
-            Array.prototype.push.apply(days, members);
+            Array.prototype.push.apply(
+                report_cards,
+                members.map(function(m){
+                    return {
+                        name:get_name(m),
+                        notes:get_notes(m)
+                    };
+                }));
         }
-        
         var x = d3.scaleLinear()
 	    .domain([0, nDays])
-	    .range([0, w]);
-        
+	    .range([0, noteswidth()]);
         var y = d3.scaleLinear()
 	    .domain([0, 9])
-	    .range([0, h]);
-        
-        svg.attr("width", 380)
-            .attr("height", 120 * days.length);
-
-        var season = svg.selectAll('g')
-            .data(days)
+	    .range([h, 0]);
+        svg.attr("width", w)
+            .attr("height", h * report_cards.length);
+        var season = svg.selectAll('g.season')
+            .data(report_cards)
             .enter().append('g')
             .attr('class', 'season')
-            .attr('width', 380)
-            .attr('height', 120)
-            .attr('transform', function(d, i){return "translate(0, " + (i * 120) + ")";});
-        ;
-        
-        season.selectAll("rect")
-            .data(function(season){
-                if( typeof season !== 'string') {
-                    return season;
-                }
-                var member = season;
-                var player = getPlayers([member])[0];
-                return player.notes.map(function(note){return note.note;})
+            .attr('width', w)
+            .attr('height', h)
+            .attr('transform', function(d, i){
+                return "translate(0, " + (i * h) + ")";
+            });
+        var bars = season.append("g")
+            .attr('transform',"translate(" + titleWidth + ",0)");
+        bars.selectAll("rect")
+            .data(function(report){
+                return report.notes.map(function(n){
+                    if( isNaN(n) ) return 0;
+                    return n
+                });
             })
             .enter().append("rect")
             .attr("class", "day")
@@ -281,32 +282,63 @@ $(function(){
             })
             .attr("height",  function(d){
                 var val = d;
-                return y(val);
+                return h - y(val);
             })
-            .attr("y", function(d){return h - y(d)})
-            .attr("width", 8)
-            .style("fill", "blue")
+            .attr("y", function(d){return y(d)})
+            .attr("width", x(1) - 2)
+        //    .style("fill", "blue")
         ;
+        var title = season.append("g")
+            .style("text-anchor", "end")
+            .attr("transform", "translate(" + (titleWidth - 6) + ", " + h / 2 + ")");
+        title.append("text")
+            .text(function(s){return s.name;})
+        var yAxis = d3.axisRight()
+            .scale(y)
+            .tickSize(-noteswidth())
+            .tickFormat(function(d) { return d; })
+        ;
+        season.append("g")
+            .attr("class", "test");
+        season.append("g")
+            .attr("class", "y axis")
+            .attr("transform", "translate(" + w + ",0)")
+            .call(yAxis)
+            .selectAll("g")
+            .filter(function(value) { return !value; })
+            .classed("zero", true);
+    }
 
-        var g = svg.selectAll(".day")
 
+    function get_name(member){
+        var player = getPlayers([member])[0];
+        return player.nom;
+    }
+
+    // get notes for member
+    function get_notes(member){
+        var player = getPlayers([member])[0];
+        return player.notes.map(function(note){
+            return note.note;
+        })
     }
     
-    dataReadyDef.done(drawAggregate);
 
     function getMeansNoteByDay(members){
-
         var players = getPlayers(members),
             days = [];
-
         for( var i = 0; i < 38; ++i) {
-            var agg = 0;
+            var agg = 0,
+                count = 0;
             for( var p = 0; p < players.length; ++p) {
                 var player = players[p],
                     note = player.notes[i].note;
-                agg += note;
+                if( note) {
+                    agg += note;
+                    count += 1;
+                }
             }
-            if( players.length ) agg /= players.length;
+            if( players.length ) agg /= count;
             days.push(agg);
         }
         return days;

@@ -68,6 +68,7 @@ you can override it here though """
             day = day
         )
         _updatestat(stat, force=True)
+        
             
 class _StatsMPG():
     def __init__(self, file, day):
@@ -127,8 +128,6 @@ def _updatestat(stat, force=False):
         players_csv=players,
         teams_csv=teams,
         day=day,
-#        bitly=stat.bitly,
- #       driveid=stat.driveid,
         filename=stat.filename,
         league=_league_name(stat),
         season=scraper._get_season(stat.filename),
@@ -139,6 +138,7 @@ def _updatestat(stat, force=False):
             setattr(newstat, k, getattr(stat, k))
     newstat.save()
     
+
 
 def _greaterthan():
     l1mpg = _latest(
@@ -159,11 +159,13 @@ def _greaterthan():
         greaterthan['l1'] = l1mpg.day
     return greaterthan
 
+
 def _league_name(stat):
     if scraper._is_l1(stat.filename):
         return StatsMPG.L1
     return StatsMPG.PL
     
+
 def _notation(stat):
     if _league_name(stat) is StatsMPG.PL or not scraper._is_lequipe(stat.filename):
         return StatsMPG.MPG
