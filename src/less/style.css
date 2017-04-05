@@ -6924,19 +6924,22 @@ ul {
 .alert {
   margin-top: -20px;
 }
-.y.axis line {
+svg .y.axis line {
   stroke: white;
   stroke-opacity: 0.2;
 }
-.y.axis path {
+svg .y.axis path {
   display: none;
 }
-.y.axis .zero line {
-  stroke: black;
+svg .y.axis .zero line {
+  stroke: #ccc;
   stroke-opacity: 1;
 }
-rect.day {
-  fill: blue;
+svg rect.day {
+  fill: #337ab7;
+}
+svg .club {
+  fill: #ccc;
 }
 /* removes button outline */
 .btn:focus,

@@ -36,23 +36,27 @@ ul{
     margin-top:-@navbar-margin-bottom;
 }
 
+svg{
+    .y.axis {
+        & line{
+            stroke:white;
+            stroke-opacity:0.2;
+        }
+        & path{
+            display: none;
+        }
+        & .zero line{
+            stroke:#ccc;
+            stroke-opacity:1;
+        }
+    }
 
-.y.axis {
-    & line{
-        stroke:white;
-        stroke-opacity:0.2;
+    rect.day{
+        fill:#337ab7;
     }
-    & path{
-        display: none;
+    .club{
+        fill:#ccc;
     }
-    & .zero line{
-        stroke:black;
-        stroke-opacity:1;
-    }
-}
-
-rect.day{
-    fill:blue;
 }
 
 /* removes button outline */

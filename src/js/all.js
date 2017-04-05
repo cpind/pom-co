@@ -17,7 +17,9 @@ $(function(){
         $searchTeams = $('.js-search-teams'),
         totalNumberOfDays = 38,
         dataReadyDef = new $.Deferred(),
-        filterPoste = null
+        filterPoste = null,
+        filterClub = null,
+        filterName = null
     ;
 
     $.ajax({
@@ -198,13 +200,34 @@ $(function(){
     });
 
     //event
+    $('.js-select-club').on('change', function(e){
+        var $el = $(e.target),
+            val = $el.val();
+        filterClub = val;
+        updateTableau(); 
+    });
+
+
     $('.js-select-poste').on('change', function(e){
         var $el = $(e.target),
             val = $el.val();
-        //set filter
         filterPoste = val;
-        //refresh the chart
-        //        refreshAggregates();
+        updateTableau();
+    });
+
+
+    $('.js-search-name').on('input', function(e){
+        var $el = $(e.target),
+            val = $el.val();
+        if(!val || val == ""){
+            $el.val("");
+        }
+        filterName = val;
+        updateTableau()
+    })
+
+    
+    function updateTableau(){
         $('.js-team-aggregate').each(function(index, el){
             var $el = $(el),
                 options = $el.data('tableau-options'),
@@ -213,13 +236,11 @@ $(function(){
                 reports = report_card(members, {detail:detail}),
                 cardHeight = options.cardHeight
             ;
-            console.log(JSON.stringify(reports.map(function(c){return c.name;})))
             svg = d3.select(el).select('svg');
-            //svg.attr('height', reports.length * cardHeight);
             d3_draw_season(svg, reports);
-        })
-
-    });
+        });
+    }
+    
     
 
     function getPlayerUID(player){
@@ -233,6 +254,7 @@ $(function(){
     }
 
 
+    
     //tableau
     function refreshAggregates(){
         $('.js-team-aggregate').each(function(index, el){
@@ -267,13 +289,25 @@ $(function(){
                 members = members.filter(function(m){
                     return statsmpg.players[m].poste == filterPoste;
                 })
-            }            
+            }
+            if( filterClub ) {
+                members = members.filter(function(m){
+                    return statsmpg.players[m].team == filterClub;
+                })
+            }
+            if( filterName ) {
+                var search = filterName.toLowerCase();
+                members = members.filter(function(m){
+                    return statsmpg.players[m].nom.toLowerCase().indexOf(search) > -1;
+                })
+            }
             Array.prototype.push.apply(
                 reports,
                 members.map(function(m){
                     return {
                         name:get_name(m),
-                        notes:get_notes(m)
+                        notes:get_notes(m),
+                        id:m
                     };
                 }));
         }
@@ -283,7 +317,6 @@ $(function(){
 
     //tableau
     function drawAggregate(el, opt){
-        //if no element call it on js-team-aggregate elements
         var members = opt.members,
             detail = opt.detail,
             svg = d3.select(el).append("svg"),
@@ -314,13 +347,10 @@ $(function(){
         draw_season(svg, report_cards);
         window.d3_draw_season = draw_season;
         
+
         function draw_season(svg, report_cards){
             var season = svg.selectAll('g.season')
                 .data(report_cards);
-            //UPDATE
-            //no need
-
-            //ENTER
             enter = season
                 .enter()
                 .append('g')
@@ -333,24 +363,37 @@ $(function(){
             var records = enter
                 .append("g")
                 .attr('class', 'records')
-                .attr('transform',"translate(" + titleWidth + ",0)")
-                .merge(season.selectAll('g.records'))
-            ;
+                .attr('transform', "translate(" + titleWidth + ",0)")
+                .merge(season.select('g.records'));            
             draw_entered(records);
             draw_notes(records);
-            enter.append("g")
+            thumbnail = enter
+                .append("g")
                 .style("text-anchor", "end")
-                .attr("transform", "translate(" + (titleWidth - 6) + ", " + h / 2 + ")")
+                .attr("transform", "translate("
+                      + (titleWidth - 6) + ", "
+                      + h / 2 + ")");
+            thumbnail
                 .append("text")
-                .attr('class','title')
+                .attr('class', 'title')
                 .merge(season.select('.title'))
                 .text(function(s){return s.name;})
-            // season.select('.title')
-            //     .text(function(s){console.log(s.name);return s.name;})
+            thumbnail
+                .append("text")
+                .attr('class', 'club')
+                .attr('y', 15)
+                .merge(season.select('.club'))
+                .text(function(s){
+                    if (s.name == "Team") {
+                        return "";
+                    }
+                    p = statsmpg.players[s.id];
+                    
+                    return p.team + " - " + p.poste;
+                })
+            
             enter.call(draw_axis);
-            season
-                .exit()
-                .remove();
+            season.exit().remove();
         }
         
         function draw_axis(season){
@@ -380,33 +423,33 @@ $(function(){
             bars
                 .enter().append("rect")
                 .attr("class", "day")
-                .merge(bars)
                 .attr("transform", function(d, i){
                     return "translate("+x(i)+",0)";
                 })
+                .merge(bars)
                 .attr("height",  function(d){
                     var val = d;
                     return h - y(val);
                 })
                 .attr("y", function(d){return y(d)})
-                .attr("width", x(1) - 2)
-            //    .style("fill", "blue")
-            ;
+                .attr("width", x(1) - 2);
         }
 
         function draw_entered(records){
-            records.selectAll("text.entered")
+            arrow = records.selectAll("text.entered")
                 .data(function(report){
                     return report.notes.map(function(n){
                         if( n == "<") return true;
                         return false;
                     });
-                })
+                });
+            arrow
                 .enter().append("text")
                 .attr("class", "entered")
                 .attr("transform", function(d, i){
                     return "translate("+x(i)+","+ h + ")";
                 })
+                .merge(arrow)
                 .text(function(t){if(t) return "<"; return ""})
         }
         
