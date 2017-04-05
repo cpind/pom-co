@@ -2,12 +2,46 @@
 
 {% block content %}
 <div class="row">
-<div class="col-md-8 col-md-offset-2">
-  <div class="js-team-view js-team-aggregate" data-members='{{team.members}}'></div>
+  <div class="col-md-8 col-md-offset-2">
+    <div class="js-team-view js-team-aggregate" data-members='{{team.members}}'>
+      <div class="row">
+        <div class="col-12 form-inline filters">
+          <input type="text" class="form-control" placeholder="Nom joueur...">
+          <select class="js-select-poste">
+            <option value="">Postes</option>
+            <option value="G">Gardien</option>
+            <option value="D">Défenseur</option>
+            <option value="M">Milieu</option>
+            <option value="A">Attaquant</option>
+          </select>
+          <select class="">
+            <option value="">Clubs</option>
+            <option value="Angers">Angers</option>
+            <option value="Bastia">Bastia</option>
+            <option value="Bordeaux">Bordeaux</option>
+            <option value="Caen">Caen</option>
+            <option value="Dijon">Dijon</option>
+            <option value="Guingamp">Guingamp</option>
+            <option value="Lille">Lille</option>
+            <option value="Lorient">Lorient</option>
+            <option value="Lyon">Lyon</option>
+            <option value="Marseille">Marseille</option>
+            <option value="Metz">Metz</option>
+            <option value="Monaco">Monaco</option>
+            <option value="Montpellier">Montpellier</option>
+            <option value="Nancy">Nancy</option>
+            <option value="Nantes">Nantes</option>
+            <option value="Nice">Nice</option>
+            <option value="Paris">Paris</option>
+            <option value="Rennes">Rennes</option>
+            <option value="Saint Etienne">Saint Etienne</option>
+            <option value="Toulouse">Toulouse</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-</div>
-
-<!-- {% include 'pomco/large_team_tile_list.html' with team_list=detail_team_list %} -->
 
 <a href="#"
    class="js-add-player"

@@ -3,6 +3,11 @@ $(function(){
     $.ajaxSetup({
         headers:{"X-CSRFToken": Cookies.get('csrftoken')}
     });
+
+    var statsmpg = {
+        players:{}
+    };
+
     
     var url = window.pomcodata,
         players = [],
@@ -11,7 +16,9 @@ $(function(){
         currentTeam = null,
         $searchTeams = $('.js-search-teams'),
         totalNumberOfDays = 38,
-        dataReadyDef = new $.Deferred();
+        dataReadyDef = new $.Deferred(),
+        filterPoste = null
+    ;
 
     $.ajax({
         type: "GET",
@@ -20,6 +27,11 @@ $(function(){
         success: function(datacsv) {
             var data = parseCSV(datacsv);
             players = data.players;
+            for( var i = 0; i < players.length; ++i ){
+                var p = players[i],
+                    uid = getPlayerUID(p);
+                statsmpg.players[uid] = p;
+            }
             dataReadyDef.resolve();
         }
     });
@@ -49,7 +61,6 @@ $(function(){
             $teams = $('.teams-drawer-content>.teams-drawer-teams'),
             $result = $('.teams-drawer-content').children('.teams-drawer-search-result'),
             $addTeam = $('.teams-drawer-content .js-add-team');
-        
         if( !value || value === "" ) {
             //reset placeholder
             $searchTeams.val("");
@@ -58,7 +69,6 @@ $(function(){
             $result.hide();
             return;
         }
-        
         //generate search result
         $result.empty();
         $content = $teams.clone();
@@ -85,7 +95,6 @@ $(function(){
             return true;
         }).appendTo($ul);
         $content.appendTo($result);
-
         var $addTeamWithName = $addTeam.clone();
         $addTeamWithName.show();
         $addTeamWithName.find('a').text("Create team name \""+ rawValue +"\"");
@@ -119,9 +128,9 @@ $(function(){
     })
     
     adjustDrawerHeight();
-
-
+    refreshAggregates();
     $(window).resize(adjustDrawerHeight);
+    
 
     function adjustDrawerHeight(){
         var topbarHeight =
@@ -156,7 +165,8 @@ $(function(){
         });
 
     });
-    
+
+
     $('.js-add-player').on('click', function(event){
         var $target = event.target,
             jsonMembers = $target.dataset.members,
@@ -187,6 +197,30 @@ $(function(){
         $playserSelect.addClass('show');
     });
 
+    //event
+    $('.js-select-poste').on('change', function(e){
+        var $el = $(e.target),
+            val = $el.val();
+        //set filter
+        filterPoste = val;
+        //refresh the chart
+        //        refreshAggregates();
+        $('.js-team-aggregate').each(function(index, el){
+            var $el = $(el),
+                options = $el.data('tableau-options'),
+                members = options.members,
+                detail = options.detail,
+                reports = report_card(members, {detail:detail}),
+                cardHeight = options.cardHeight
+            ;
+            console.log(JSON.stringify(reports.map(function(c){return c.name;})))
+            svg = d3.select(el).select('svg');
+            //svg.attr('height', reports.length * cardHeight);
+            d3_draw_season(svg, reports);
+        })
+
+    });
+    
 
     function getPlayerUID(player){
         return player.nom + '(' + player.team + ')';                              
@@ -199,26 +233,55 @@ $(function(){
     }
 
 
-//    dataReadyDef.done(drawTeamView);
-    //    dataReadyDef.done(drawAggregate);
-
-
-    $('.js-team-aggregate').each(function(index, el){
-        var members = el.dataset.members,
-            detail = el.dataset.detail || true;
-        if( detail == "false")
-            detail = false;
-        $.when(dataReadyDef).done(function(){
-            drawAggregate(el, {
-                members: members,
-                detail: detail,
-                height: 50,
-                width:$(el).width()
+    //tableau
+    function refreshAggregates(){
+        $('.js-team-aggregate').each(function(index, el){
+            var members = JSON.parse(el.dataset.members),
+                detail = el.dataset.detail || true;
+            if( detail == "false")
+                detail = false;
+            $.when(dataReadyDef).done(function(){
+                drawAggregate(el, {
+                    members: members,
+                    detail: detail,
+                    height: 50,
+                    width:$(el).width()
+                });
             });
         });
-    });
+    }
 
-    
+
+    function report_card(members, opt){
+        var detail = opt.detail || false,
+            reports = [];
+        reports.push({
+            name:"Team",
+            notes:getMeansNoteByDay(members)
+        });
+        if (detail) {
+            if( members.indexOf('*') > -1 ) {
+                members = players.map(getPlayerUID);
+            }
+            if( filterPoste ) {
+                members = members.filter(function(m){
+                    return statsmpg.players[m].poste == filterPoste;
+                })
+            }            
+            Array.prototype.push.apply(
+                reports,
+                members.map(function(m){
+                    return {
+                        name:get_name(m),
+                        notes:get_notes(m)
+                    };
+                }));
+        }
+        return reports;
+    }
+
+
+    //tableau
     function drawAggregate(el, opt){
         //if no element call it on js-team-aggregate elements
         var members = opt.members,
@@ -230,83 +293,125 @@ $(function(){
             titleWidth = 100,
             noteswidth = function(){
                 return w - titleWidth;
-            };
-        report_cards = [{
-            name:"Team",
-            notes:getMeansNoteByDay(members)
-        }];
-        if (detail) {
-            members = JSON.parse(members);
-            if( members.indexOf('*') > -1 ) {
-                members = players.map(getPlayerUID);
-            }
-            Array.prototype.push.apply(
-                report_cards,
-                members.map(function(m){
-                    return {
-                        name:get_name(m),
-                        notes:get_notes(m)
-                    };
-                }));
-        }
+            },
+            $el = $(el);
+        $el.data("tableau-options", {
+            members:members,
+            cardHeight:h,
+            detail:detail
+        });
+        report_cards = report_card(members, {detail:detail});
         var x = d3.scaleLinear()
 	    .domain([0, nDays])
 	    .range([0, noteswidth()]);
         var y = d3.scaleLinear()
 	    .domain([0, 9])
-	    .range([h, 0]);
+	    .range([h, 2]);
         svg.attr("width", w)
-            .attr("height", h * report_cards.length);
-        var season = svg.selectAll('g.season')
-            .data(report_cards)
-            .enter().append('g')
-            .attr('class', 'season')
-            .attr('width', w)
-            .attr('height', h)
-            .attr('transform', function(d, i){
-                return "translate(0, " + (i * h) + ")";
-            });
-        var bars = season.append("g")
-            .attr('transform',"translate(" + titleWidth + ",0)");
-        bars.selectAll("rect")
-            .data(function(report){
-                return report.notes.map(function(n){
-                    if( isNaN(n) ) return 0;
-                    return n
+            .attr("height", h * report_cards.length)
+        ;
+
+        draw_season(svg, report_cards);
+        window.d3_draw_season = draw_season;
+        
+        function draw_season(svg, report_cards){
+            var season = svg.selectAll('g.season')
+                .data(report_cards);
+            //UPDATE
+            //no need
+
+            //ENTER
+            enter = season
+                .enter()
+                .append('g')
+                .attr('class', 'season')
+                .attr('width', w)
+                .attr('height', h)
+                .attr('transform', function(d, i){
+                    return "translate(0, " + (i * h) + ")";
                 });
-            })
-            .enter().append("rect")
-            .attr("class", "day")
-            .attr("transform", function(d, i){
-                return "translate("+x(i)+",0)";
-            })
-            .attr("height",  function(d){
-                var val = d;
-                return h - y(val);
-            })
-            .attr("y", function(d){return y(d)})
-            .attr("width", x(1) - 2)
-        //    .style("fill", "blue")
-        ;
-        var title = season.append("g")
-            .style("text-anchor", "end")
-            .attr("transform", "translate(" + (titleWidth - 6) + ", " + h / 2 + ")");
-        title.append("text")
-            .text(function(s){return s.name;})
-        var yAxis = d3.axisRight()
-            .scale(y)
-            .tickSize(-noteswidth())
-            .tickFormat(function(d) { return d; })
-        ;
-        season.append("g")
-            .attr("class", "test");
-        season.append("g")
+            var records = enter
+                .append("g")
+                .attr('class', 'records')
+                .attr('transform',"translate(" + titleWidth + ",0)")
+                .merge(season.selectAll('g.records'))
+            ;
+            draw_entered(records);
+            draw_notes(records);
+            enter.append("g")
+                .style("text-anchor", "end")
+                .attr("transform", "translate(" + (titleWidth - 6) + ", " + h / 2 + ")")
+                .append("text")
+                .attr('class','title')
+                .merge(season.select('.title'))
+                .text(function(s){return s.name;})
+            // season.select('.title')
+            //     .text(function(s){console.log(s.name);return s.name;})
+            enter.call(draw_axis);
+            season
+                .exit()
+                .remove();
+        }
+        
+        function draw_axis(season){
+            var yAxis = d3.axisRight()
+                .scale(y)
+                .tickSize(-noteswidth())
+                .tickFormat(function(d) { return d; })
+            ;
+            season.append("g")
             .attr("class", "y axis")
             .attr("transform", "translate(" + w + ",0)")
             .call(yAxis)
             .selectAll("g")
             .filter(function(value) { return !value; })
-            .classed("zero", true);
+                .classed("zero", true);
+        }
+
+        function draw_notes(records){
+            bars = records.selectAll("rect")
+                .data(function(report){
+                    return report.notes.map(function(n){
+                        if( isNaN(n) ) return 0;
+                        return n
+                    });
+                });
+            
+            bars
+                .enter().append("rect")
+                .attr("class", "day")
+                .merge(bars)
+                .attr("transform", function(d, i){
+                    return "translate("+x(i)+",0)";
+                })
+                .attr("height",  function(d){
+                    var val = d;
+                    return h - y(val);
+                })
+                .attr("y", function(d){return y(d)})
+                .attr("width", x(1) - 2)
+            //    .style("fill", "blue")
+            ;
+        }
+
+        function draw_entered(records){
+            records.selectAll("text.entered")
+                .data(function(report){
+                    return report.notes.map(function(n){
+                        if( n == "<") return true;
+                        return false;
+                    });
+                })
+                .enter().append("text")
+                .attr("class", "entered")
+                .attr("transform", function(d, i){
+                    return "translate("+x(i)+","+ h + ")";
+                })
+                .text(function(t){if(t) return "<"; return ""})
+        }
+        
+        
+        
     }
 
 
@@ -333,7 +438,7 @@ $(function(){
             for( var p = 0; p < players.length; ++p) {
                 var player = players[p],
                     note = player.notes[i].note;
-                if( note) {
+                if( note && note != "<") {
                     agg += note;
                     count += 1;
                 }
@@ -345,21 +450,13 @@ $(function(){
     }
 
     function getPlayers(members){
-
         //if '*' returns all players
         if( members.indexOf('*') > -1 ) {
             return players;
         }
-        
-        var res = [];
-        for(var i = 0; i < players.length; ++i){
-            var player = players[i],
-                playerId = getPlayerUID(player);
-            if( members.indexOf(playerId) > -1 ){
-                res.push(player);
-            }
-        }
-        return res;
+        return members.map(function(uid){
+            return statsmpg.players[uid];
+        });
     }
 
     //parse the csv file
@@ -421,11 +518,15 @@ $(function(){
                     noteTokens = formattedNote.split(/[\(\)]/),
                     note = parseFloat(noteTokens[0]),
                     goals = parseFloat(noteTokens[1]);
+
                 if( isNaN(note) ){
                     note = 0;
                 }
                 if( isNaN(goals) ) {
                     goals = 0;
+                }
+                if( noteTokens[0] == "<"){
+                    note = "<";
                 }
                 notes.push({note:note, goals:goals});
             }
