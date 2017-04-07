@@ -34,6 +34,7 @@ $(function(){
     //initial state
     $('.js-done').hide();
     
+
     $.ajax({
         type: "GET",
         url: url,
@@ -45,9 +46,11 @@ $(function(){
         }
     });
 
+
     $('.js-teams-menu').on('click', function(){
         $('.teams-drawer').toggleClass('is-shown');
     });
+
 
     $(window).on('click', function(event){
         //        return;
@@ -212,7 +215,6 @@ $(function(){
     });
 
 
-    //
     $('.js-done').on('click', function(event){
         var target = event.target,
             url = target.dataset.url,
@@ -292,6 +294,7 @@ $(function(){
         var active = null,
             selection = d3.selectAll('svg .season')
         ;
+        disableFilters();
         setMode(MOVES);
         selection
             .on('click',function(d, index, nodes){
@@ -320,6 +323,7 @@ $(function(){
             $('.js-done').show();
             membersToAdd = [];
         }
+        //TODO: beware of filters
         var data = d3.selectAll('.season')
             .data()
             .filter(function(d){
@@ -332,6 +336,9 @@ $(function(){
             .map(function(d){return d.id;})
             .filter(function(m){return m;})
         ;
+        if( mode == VIEW) {
+            enableFilters();
+        }
     }
     
     
@@ -362,6 +369,31 @@ $(function(){
         updateTableau()
     })
 
+
+    function clearFilters(){
+        filterPoste = false;
+        filterClub = false;
+        filterName = false;
+        //thanks to for select update
+        //https://silviomoreto.github.io/bootstrap-select/methods/
+        $('.js-select-poste .selectpicker').selectpicker('val', "")
+        $('.js-select-club .selectpicker').selectpicker('val', "")
+        $('.js-search-name').val('')
+        updateTableau();
+    }
+    
+    function disableFilters() {
+        clearFilters();
+        //and disable
+        enableFilters(false);
+    }
+
+    function enableFilters(enabled){
+        var disabled = (enabled == null) ? false: !enabled;
+        $('.js-select-poste button').prop('disabled', disabled)
+        $('.js-select-club button').prop('disabled', disabled)
+        $('.js-search-name').prop('disabled', disabled)
+    }
 
     function tableauOptions(){
         return $('.js-team-aggregate').data('tableau-options');
@@ -414,7 +446,6 @@ $(function(){
             });
         });
     }
-    
 
 
     function tableauInit(el, members, opt){

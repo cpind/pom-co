@@ -395,15 +395,16 @@
             return note.note;
         })
     }
-    
 
-
-
+    //get the members displayed
+    function members(el) {
+    }
 
     //EXPORTS
     window.tableau = {
         init:init,
         sortCards: sortCards,
+        members: members
     };
 
 })()
