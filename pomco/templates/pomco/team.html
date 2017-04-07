@@ -6,15 +6,15 @@
     <div class="js-team-view js-team-aggregate" data-members='{{team.members}}'>
       <div class="row">
         <div class="col-12 form-inline filters">
-          <input type="text" placeholder="Nom joueur..." class="js-search-name">
-          <select class="js-select-poste">
+          <input type="text" placeholder="Nom joueur..." class="js-search-name form-control">
+          <select class="js-select-poste selectpicker" data-width="100px">
             <option value="">Postes</option>
             <option value="G">Gardien</option>
             <option value="D">Défenseur</option>
             <option value="M">Milieu</option>
             <option value="A">Attaquant</option>
           </select>
-          <select class="js-select-club">
+          <select class="js-select-club selectpicker" data-width="100px">
             <option value="">Clubs</option>
             <option value="SCO">Angers</option>
             <option value="SCB">Bastia</option>
@@ -37,19 +37,32 @@
             <option value="ASSE">Saint Etienne</option>
             <option value="TFC">Toulouse</option>
           </select>
+          {% if team.editable %}
+          <div class="dropdown btn-group js-edit">
+            <button class="btn btn-default dropdown-toggle" type="button" id="dropdownEdit" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+              Edit
+              <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+              <li><a href="#" class="js-add-player2">Add Players</a></li>
+              <li><a href="#" class="js-switch-to-remove-players">Remove Players</a></li>
+              <li><a href="#" class="js-switch-to-moves-players">Moves</a></li>
+              <li><a href="#" class="js-clear-team">Clear</a></li>
+            </ul>
+          </div>
+          <button
+             class="btn btn-primary js-done"
+             type="button"
+             data-url="{{team.url}}">
+            Done</button>
         </div>
+        {% endif %}
       </div>
     </div>
   </div>
 </div>
 
-<a href="#"
-   class="js-add-player"
-   data-members = '{{team.members}}'
-   data-team-id = {{team.id}}>
-  Add a player... </a>
-
-{% if editable %}
+{% if team.editable %}
    
 <div class="players-select">
   

@@ -19,8 +19,26 @@ $(function(){
         dataReadyDef = new $.Deferred(),
         filterPoste = null,
         filterClub = null,
-        filterName = null
+        filterName = null,
+        membersToAdd = [],
+        teamMembers = [],
+        excludeMembers = false
     ;
+
+
+    //STATES
+    var REMOVE = "remove",
+        ADD = "add",
+        MOVES = "moves",
+        VIEW = "view";
+
+    //current state
+    var state = VIEW;
+
+
+    //initial state
+    $('.js-done').hide();
+    
 
     $.ajax({
         type: "GET",
@@ -154,21 +172,26 @@ $(function(){
             });
         
         //update members on db
-        $.ajax({
+        saveMembers(members, url)
+            .done(function(data){
+                //clear the list
+                $playersList.empty();
+                $playserSelect.removeClass('show');
+                currentTeam = data;
+            });
+    });
+
+
+    var saveMembers = function(members, url){
+        return $.ajax({
             type: "POST",
             url: url,
             dataType: "json",
             data:{members:JSON.stringify(members)}
-        }).done(function(data){
-            //clear the list
-            $playersList.empty();
-            $playserSelect.removeClass('show');
-            currentTeam = data;
         });
+    }
 
-    });
-
-
+    
     $('.js-add-player').on('click', function(event){
         var $target = event.target,
             jsonMembers = $target.dataset.members,
@@ -199,6 +222,133 @@ $(function(){
         $playserSelect.addClass('show');
     });
 
+
+    //
+    $('.js-done').on('click', function(event){
+        var target = event.target,
+            url = target.dataset.url,
+            members = teamMembers,
+            restoreTableau = true;
+        if( !membersToAdd.length && (state != MOVES)) {
+            return done();
+        }
+        if( state == REMOVE ) {
+            members = members.filter(function(m){
+                return membersToAdd.indexOf(m) == -1;
+            });
+            restoreTableau = false;
+        } else if (state == MOVES) {
+            var data = d3.selectAll('.season').data();
+            sortCards(data);
+            members = data
+                .filter(function(m){return !m._hidden;})
+                .map(function(c){return c.id;})
+                .filter(function(m){return m;})
+            ;
+            d3.selectAll('g.season').classed('selected', false);
+            restoreTableau = false;
+        } else {
+            members = members.concat(membersToAdd);
+            d3.select('svg').classed('active', false);
+        }
+        saveMembers(members, url).done(done);
+        function done() {
+            teamMembers = members;
+            $(event.target).hide();
+            $('.js-edit').show();
+            excludeMembers = false;
+            if( restoreTableau ) {
+                updateTableau({members:members});
+            }
+            setMode(VIEW);
+        }
+    })
+
+
+    $('.js-add-player2').on('click', function(event){
+        setMode(ADD);
+        excludeMembers = true;
+        var data = d3.selectAll('.season')
+            .data()
+            .filter(function(d){
+                return !d._hidden;
+            });
+        if( data[0]._order == null) {
+            sortCards(data);
+        }
+        teamMembers = data
+            .map(function(d){return d.id;})
+            .filter(function(m){return m;})
+        ;
+        updateTableau({click:function(m){
+            membersToAdd.push(m);
+            d3_remove_member(m);
+        }});
+    });
+
+
+    $('.js-switch-to-remove-players').on('click', function(event){
+        setMode(REMOVE);
+        d3_season_on_click(//updateTableau({
+            //click:
+            function(m){
+                membersToAdd.push(m);
+                d3_remove_member(m);
+            }
+            // ,
+            // updateMembers: false}
+        );
+    });
+    
+
+    $('.js-switch-to-moves-players').on('click', function(event){
+        var active = null,
+            selection = d3.selectAll('svg .season')
+        ;
+        setMode(MOVES);
+        //d3.select('svg').classed('active', true);
+        selection
+            .on('click',function(d, index, nodes){
+                if( !d.id ) {
+                    return;
+                }
+                if( !active ) {
+                    active = d.id;
+                    d3.select(this).classed('selected', true);
+                    return;
+                }
+                if( active == d.id ) {
+                    active = null;
+                    d3.select(this).classed('selected', false);
+                    return;
+                }
+                d3_switch_members(active, d.id);
+            });
+    });
+
+    
+    var setMode = function (mode) {
+        state = mode;
+        if( mode != VIEW ) {
+            $('.js-edit').hide();
+            $('.js-done').show();
+            membersToAdd = [];
+        }
+        var data = d3.selectAll('.season')
+            .data()
+            .filter(function(d){
+                return !d._hidden;
+            });
+        if( data[0]._order != null) {
+            sortCards(data);
+        }
+        teamMembers = data
+            .map(function(d){return d.id;})
+            .filter(function(m){return m;})
+        ;
+    }
+    
+    
     //event
     $('.js-select-club').on('change', function(e){
         var $el = $(e.target),
@@ -226,21 +376,29 @@ $(function(){
         updateTableau()
     })
 
+
+    function tableauOptions(){
+        return $('.js-team-aggregate').data('tableau-options');
+    }
     
-    function updateTableau(){
+    
+    function updateTableau(opt){
+        var opt = opt || {};
         $('.js-team-aggregate').each(function(index, el){
             var $el = $(el),
                 options = $el.data('tableau-options'),
-                members = options.members,
+                //TODO: clarify option settings
+                members = opt.members || options.members,
                 detail = options.detail,
-                reports = report_card(members, {detail:detail}),
+                reports = report_card(members, {
+                    detail:detail
+                }),
                 cardHeight = options.cardHeight
             ;
             svg = d3.select(el).select('svg');
-            d3_draw_season(svg, reports);
+            d3_draw_season(svg, reports, {'click': opt.click});
         });
     }
-    
     
 
     function getPlayerUID(player){
@@ -253,7 +411,6 @@ $(function(){
         drawAggregate(0, $el[0])
     }
 
-
     
     //tableau
     function refreshAggregates(){
@@ -262,6 +419,8 @@ $(function(){
                 detail = el.dataset.detail || true;
             if( detail == "false")
                 detail = false;
+            members = members.filter(function(m){return m;});
+            teamMembers = members;
             $.when(dataReadyDef).done(function(){
                 drawAggregate(el, {
                     members: members,
@@ -272,45 +431,55 @@ $(function(){
             });
         });
     }
-
-
+    
     function report_card(members, opt){
         var detail = opt.detail || false,
+            exclude = excludeMembers,
             reports = [];
+        if( exclude ) {
+            var newMembers = []
+            for( var key in statsmpg.players){
+                if( members.indexOf(key) == - 1) {
+                    newMembers.push(key);
+                }
+            }
+            members = newMembers;
+        }
         reports.push({
             name:"Team",
             notes:getMeansNoteByDay(members)
         });
-        if (detail) {
-            if( members.indexOf('*') > -1 ) {
-                members = players.map(getPlayerUID);
-            }
-            if( filterPoste ) {
-                members = members.filter(function(m){
-                    return statsmpg.players[m].poste == filterPoste;
-                })
-            }
-            if( filterClub ) {
-                members = members.filter(function(m){
-                    return statsmpg.players[m].team == filterClub;
-                })
-            }
-            if( filterName ) {
-                var search = filterName.toLowerCase();
-                members = members.filter(function(m){
-                    return statsmpg.players[m].nom.toLowerCase().indexOf(search) > -1;
-                })
-            }
-            Array.prototype.push.apply(
-                reports,
-                members.map(function(m){
-                    return {
-                        name:get_name(m),
-                        notes:get_notes(m),
-                        id:m
-                    };
-                }));
+        if (!detail) {
+            return reports;
         }
+        if( members.indexOf('*') > -1 ) {
+            members = players.map(getPlayerUID);
+        }
+        if( filterPoste ) {
+            members = members.filter(function(m){
+                return statsmpg.players[m].poste == filterPoste;
+            })
+        }
+        if( filterClub ) {
+            members = members.filter(function(m){
+                return statsmpg.players[m].team == filterClub;
+            })
+        }
+        if( filterName ) {
+            var search = filterName.toLowerCase();
+            members = members.filter(function(m){
+                return statsmpg.players[m].nom.toLowerCase().indexOf(search) > -1;
+            })
+        }
+        Array.prototype.push.apply(
+            reports,
+            members.map(function(m){
+                return {
+                    name:get_name(m),
+                    notes:get_notes(m),
+                    id:m
+                };
+            }));
         return reports;
     }
 
@@ -328,38 +497,164 @@ $(function(){
                 return w - titleWidth;
             },
             $el = $(el);
+        report_cards = report_card(members, {detail:detail});
         $el.data("tableau-options", {
             members:members,
             cardHeight:h,
             detail:detail
         });
-        report_cards = report_card(members, {detail:detail});
         var x = d3.scaleLinear()
 	    .domain([0, nDays])
 	    .range([0, noteswidth()]);
         var y = d3.scaleLinear()
 	    .domain([0, 9])
 	    .range([h, 2]);
-        svg.attr("width", w)
-            .attr("height", h * report_cards.length)
-        ;
+        svg.attr("width", w);
 
         draw_season(svg, report_cards);
         window.d3_draw_season = draw_season;
-        
+        window.d3_remove_member = remove_member;
+        window.d3_switch_members = switch_members;
 
-        function draw_season(svg, report_cards){
-            var season = svg.selectAll('g.season')
+
+        var transition = d3.transition()
+            .duration(150)
+            .ease(d3.easeLinear);
+
+        function initCardOrder(data){
+            data.forEach(function(c, i){
+                c._order = i;
+            });
+        }
+
+        function findCard(data, member){
+            for( var i = 0; i < data.length; i++){
+                var id = data[i].id;
+                if( id == member ) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+
+        function switch_members(m1, m2){
+            var tr2 = selectMember(m2)
+                .attr('transform'),
+                data = svg.selectAll('g.season').data();
+            selectMember(m1)
+                .transition(transition)
+                .attr('transform', tr2);
+            //data with order
+            if( data[0]._order == null) {
+                initCardOrder(data);
+            }
+            sortCards(data);
+            //find members position
+            var i1 = findCard(data, m1),
+                i2 = findCard(data, m2);
+            //switch the position
+            var data1 = data.splice(i1,1)[0];
+            data.splice(i2, 0, data1);
+            initCardOrder(data);
+            //transform
+            svg
+                .selectAll('g.season')
+                .each(function(d, i, nodes){
+                    newindex = d._order;
+                    transform(d3.select(this)
+                              .transition(transition), newindex);
+                });
+        }
+
+        function selectMember(m) {
+            return svg
+                .select("#" + uid_to_id(m));
+        }
+
+        function remove_member(member) {
+            svg.select("#" + uid_to_id(member))
+                .remove();
+            var data = svg.selectAll('.season').data();
+            if( data[0]._order == null) {
+                initCardOrder(data);
+            }
+            sortCards(data);
+            //find members position
+            initCardOrder(data);
+            svg
+                .selectAll('g.season')
+                .transition(transition)
+                .call(transform);
+        }
+
+
+        function uid_to_id(member){
+            if( !member ) {return "";}
+            var id_tokens = 
+                member.split(/[\(\)\ \.]+/);
+            id_tokens = id_tokens.filter(function (t){ return t;})
+            return id_tokens.join("__");
+        }
+
+        window.d3_season_on_click = function(listener){
+            var svg = d3.select('svg'),
+                season = svg.selectAll('g.season')
+            season_on_click(season, listener);
+        }
+
+        function season_on_click(sel, listener){
+            var svg = d3.select('svg');
+            if( listener ) {
+                svg.classed("active", true);
+                sel
+                    .on('click', 
+                        function(d, index, nodes) {
+                            if( !d.id ) { return; }
+                            listener.call(this, d.id);
+                        });
+            } else {
+                svg.classed("active", false);
+                sel.on('click', null);
+            }
+        }
+        
+        function draw_season(svg, report_cards, opt){
+            var opt = opt || {},
+                click = opt.click || null,
+                season = svg.selectAll('g.season')
                 .data(report_cards);
+            updateOptions({report_cards:report_cards});
+            svg
+                .attr("height", h * report_cards.length + 2);
             enter = season
                 .enter()
                 .append('g')
                 .attr('class', 'season')
-                .attr('width', w)
-                .attr('height', h)
-                .attr('transform', function(d, i){
-                    return "translate(0, " + (i * h) + ")";
-                });
+                .call(setSize)
+                .call(transform);
+
+            enter.merge(season)
+                .attr('id', function(d){return uid_to_id(d.id);})
+                .attr("opacity", 1)
+                .each(function(d){d._hidden=false;});
+            season_on_click(enter.merge(season), click);
+//             if( typeof(click) == "function" ) {
+//                 svg.classed("active", true);
+//                 enter
+//                     .merge(season)
+//                     .on('click', 
+//                         function(d, index, nodes) {
+//                             if( !d.id ) {return;}
+// //                            console.log('clicked : ' + d.id);
+//                             click.call(this, d.id);
+//                         })
+//                     ;
+                
+//             } else {
+//                 svg.classed("active", false);
+//             }
+//            enter.merge(season)
             var records = enter
                 .append("g")
                 .attr('class', 'records')
@@ -391,10 +686,46 @@ $(function(){
                     
                     return p.team + " - " + p.poste;
                 })
-            
             enter.call(draw_axis);
-            season.exit().remove();
+            enter
+                .append('rect')
+                .attr('class', 'season-glass')
+                .call(setSize)
+                .attr('opacity', 0);            
+            season.exit()
+                .attr('id', "")
+                .attr("opacity", 0)
+                .each(function(d){
+                    d._hidden = true;
+                })
+            ;
         }
+
+
+        function transform(sel, i){
+            var y = function(index){
+                return index * h;
+            }
+            if( i != null) {
+                y = function(){
+                    return i * h;
+                }
+            }
+            return sel.attr('transform', function(d, i) {
+                var ii = i;
+                if( d._order != null) {
+                    ii = d._order;
+                }
+                return "translate(0, " + y(ii) + ")";
+            })
+        }
+        
+        function setSize(sel){
+            sel.attr('width', w)
+                .attr('height', h);
+            return sel;
+        }
+
         
         function draw_axis(season){
             var yAxis = d3.axisRight()
@@ -452,11 +783,24 @@ $(function(){
                 .merge(arrow)
                 .text(function(t){if(t) return "<"; return ""})
         }
-        
-        
-        
+
+        function updateOptions(opt){
+            var opt = opt || {};
+            if( !opt.report_cards ) {
+                    return;
+            }
+            var members = opt.report_cards.map(function(c){return c.id;});
+            members = members.filter(function (m){return m;})
+            $el.data("tableau-options").members = members;
+        }
     }
 
+    function sortCards(cards){
+        cards.sort(function(d1, d2){
+            return d1._order - d2._order;
+        });            
+    }
+        
 
     function get_name(member){
         var player = getPlayers([member])[0];
@@ -497,9 +841,11 @@ $(function(){
         if( members.indexOf('*') > -1 ) {
             return players;
         }
-        return members.map(function(uid){
+        res =  members.map(function(uid){
             return statsmpg.players[uid];
         });
+        res = res.filter(function(p){return p;});
+        return res;
     }
 
     //parse the csv file

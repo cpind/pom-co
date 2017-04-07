@@ -6941,6 +6941,14 @@ svg rect.day {
 svg .club {
   fill: #ccc;
 }
+svg.active .season-glass:hover {
+  fill: red;
+  opacity: 0.5;
+}
+svg .season.selected .season-glass {
+  fill: red;
+  opacity: 0.5;
+}
 /* removes button outline */
 .btn:focus,
 .btn:active,

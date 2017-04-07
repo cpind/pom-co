@@ -38,6 +38,9 @@ class Team(models.Model):
     def url(self):
         return reverse('team', kwargs={'team_id': '$' + str(self.id)})
 
+    def editable(self):
+        return True
+
     def type(self):
         return 'custom'
 
