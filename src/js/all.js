@@ -4,10 +4,6 @@ $(function(){
         headers:{"X-CSRFToken": Cookies.get('csrftoken')}
     });
 
-    // var statsmpg = {
-    //     players:{}
-    // };
-
     
     var url = window.pomcodata,
         players = [],
@@ -815,15 +811,7 @@ $(function(){
     }
 
     function getPlayers(members){
-        //if '*' returns all players
-        if( members.indexOf('*') > -1 ) {
-            return players;
-        }
-        res =  members.map(function(uid){
-            return statsmpg.players[uid];
-        });
-        res = res.filter(function(p){return p;});
-        return res;
+        return statsmpg.playersGet(members);
     }
 
 

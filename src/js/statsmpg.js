@@ -1,6 +1,7 @@
 // this module exports window.statsmpg
 (function(){
-    console.log('statsmpg.js loaded');
+
+
     var players = [],
         playersIndex = {}
     ;
@@ -110,13 +111,27 @@
             }
         }
     }
+
+
+    function playersGet(members) {
+        //if '*' returns all players
+        if( members.indexOf('*') > -1 ) {
+            return players;
+        }
+        res =  members.map(function(uid){
+            return statsmpg.players[uid];
+        });
+        res = res.filter(function(p){return p;});
+        return res;
+    }
     
     //export
     window.statsmpg = {
         init:init,
         players:playersIndex,
         playerUID: playerUID,
-        playersAll: players
+        playersAll: players,
+        playersGet: playersGet
     };
     
 })()
