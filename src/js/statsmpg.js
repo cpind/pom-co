@@ -1,11 +1,12 @@
 // this module exports window.statsmpg
 (function(){
 
-
+    //INTERNALS
     var players = [],
-        playersIndex = {}
+        playersIndex = {},
+        teams = [],
+        current_team = ""
     ;
-    
 
     function init(datacsv) {
         var data = parseCSV(datacsv);
@@ -25,9 +26,7 @@
 
     function parseCSV(data){
         var players = [],
-            teams = [],
-            lines = data.split("\n"),
-            current_team = "";
+            lines = data.split("\n");
         //extract teams
         var //reg = new RegExp("-{8}\s\d+\s-\s(\D+)$([^,]+)", "m");
         reg = new RegExp("-{8}[^0-9]*([0-9]*)[^A-Z]*([A-Z]*).*\n([^,]*)", "mg");
@@ -50,7 +49,7 @@
             }
             if( ! (new RegExp("^[GDMA],")).test(line)) continue;
             var split = line.split(",");
-            var notes = parseNotes(line);
+            var notes = parseNotes(split, line);
             var player = {
                 poste: split[0],
                 nom: split[1],
@@ -65,73 +64,98 @@
 
         return {players:players, teams:teams}
 
-        function parseNotes(line) {
-            var formattedNotes = line.split(','),
-                notes = [];
-            for( var i = 6; i < formattedNotes.length; ++i ) {
-                var formattedNote = split[i],
-                    noteTokens = formattedNote.split(/[\(\)]/),
-                    note = parseFloat(noteTokens[0]),
-                    goals = parseFloat(noteTokens[1]);
-                if( isNaN(note) ){
-                    note = 0;
-                }
-                if( isNaN(goals) ) {
-                    goals = 0;
-                }
-                if( noteTokens[0] == "<"){
-                    note = "<";
-                }
-                notes.push({note:note, goals:goals});
-            }
-            return notes;
-        }
-        
-        function extractOpposition(line) {
-            var cells = line.split(','),
-                days = [];            
-            for(var i = 0; i < cells.length; ++i) {
-                var cell = cells[i];
-                if( !(new RegExp("J[0-9]{2}")).test(cell) ) continue;
-                var tokens = cell.split(/[:\ \(\)]/)
-                    .filter(function(s){
-                        return s!== "";
-                    });
-                days.push({
-                    day:tokens[0],
-                    location: tokens[1],
-                    opponentTeam: tokens[2]
+
+    }
+
+    function extractOpposition(line) {
+        var cells = line.split(','),
+            days = [];            
+        for(var i = 0; i < cells.length; ++i) {
+            var cell = cells[i];
+            if( !(new RegExp("J[0-9]{2}")).test(cell) ) continue;
+            var tokens = cell.split(/[:\ \(\)]/)
+                .filter(function(s){
+                    return s!== "";
                 });
-            }
-            for(var i = 0; i < teams.length; ++i){
-                var team = teams[i];
-                if( team.short_name === current_team ) {
-                    team.days = days;
-                }
+            days.push({
+                day:tokens[0],
+                location: tokens[1],
+                opponentTeam: tokens[2]
+            });
+        }
+        for(var i = 0; i < teams.length; ++i){
+            var team = teams[i];
+            if( team.short_name === current_team ) {
+                team.days = days;
             }
         }
     }
 
 
-    function playersGet(members) {
+    function parseNotes(split, line) {
+        var formattedNotes = line.split(','),
+            notes = [];
+        for( var i = 6; i < formattedNotes.length; ++i ) {
+            var formattedNote = split[i],
+                noteTokens = formattedNote.split(/[\(\)]/),
+                note = parseFloat(noteTokens[0]),
+                goals = parseFloat(noteTokens[1]);
+            if( isNaN(note) ){
+                note = 0;
+            }
+            if( isNaN(goals) ) {
+                goals = 0;
+            }
+            if( noteTokens[0] == "<"){
+                note = "<";
+            }
+            notes.push({note:note, goals:goals});
+        }
+        return notes;
+    }
+    
+
+    function playersGet(playerIds) {
         //if '*' returns all players
-        if( members.indexOf('*') > -1 ) {
+        if( playerIds.indexOf('*') > -1 ) {
             return players;
         }
-        res =  members.map(function(uid){
+        res =  playerIds.map(function(uid){
             return statsmpg.players[uid];
         });
         res = res.filter(function(p){return p;});
         return res;
     }
+
+
+    function meansByDay(playerIds) {
+        var players = playersGet(playerIds),
+            days = [];
+        for( var i = 0; i < 38; ++i) {
+            var agg = 0,
+                count = 0;
+            for( var p = 0; p < players.length; ++p) {
+                var player = players[p],
+                    note = player.notes[i].note;
+                if( note && note != "<") {
+                    agg += note;
+                    count += 1;
+                }
+            }
+            if( players.length ) agg /= count;
+            days.push(agg);
+        }
+        return days;
+    }
     
-    //export
+    //EXPORTS
     window.statsmpg = {
         init:init,
         players:playersIndex,
         playerUID: playerUID,
         playersAll: players,
-        playersGet: playersGet
+        playersGet: playersGet,
+        meansByDay: meansByDay
     };
     
 })()

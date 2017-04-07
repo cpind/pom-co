@@ -769,6 +769,8 @@ $(function(){
         }
     }
 
+
+    //UTILITIES & ALIASES
     function sortCards(cards){
         cards.sort(function(d1, d2){
             return d1._order - d2._order;
@@ -777,13 +779,12 @@ $(function(){
         
 
     function get_name(member){
-        var player = getPlayers([member])[0];
-        return player.nom;
+        return statsmpg.players[member].nom;
     }
 
-    // get notes for member
+
     function get_notes(member){
-        var player = getPlayers([member])[0];
+        var player = statsmpg.players[member];
         return player.notes.map(function(note){
             return note.note;
         })
@@ -791,23 +792,7 @@ $(function(){
     
 
     function getMeansNoteByDay(members){
-        var players = getPlayers(members),
-            days = [];
-        for( var i = 0; i < 38; ++i) {
-            var agg = 0,
-                count = 0;
-            for( var p = 0; p < players.length; ++p) {
-                var player = players[p],
-                    note = player.notes[i].note;
-                if( note && note != "<") {
-                    agg += note;
-                    count += 1;
-                }
-            }
-            if( players.length ) agg /= count;
-            days.push(agg);
-        }
-        return days;
+        return statsmpg.meansByDay(members);
     }
 
     function getPlayers(members){
