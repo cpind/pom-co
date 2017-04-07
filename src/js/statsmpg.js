@@ -11,7 +11,9 @@
 
     function init(datacsv) {
         var data = parseCSV(datacsv);
-        players = data.players;
+        for( var i = 0; i < data.players.length; ++i ) {
+            players.push(data.players[i]);
+        }
         for( var i = 0; i < players.length; ++i ) {
             var p = players[i],
                 uid = playerUID(p);
