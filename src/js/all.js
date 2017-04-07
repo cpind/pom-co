@@ -6,7 +6,6 @@ $(function(){
 
     
     var url = window.pomcodata,
-        players = [],
         $playserSelect = $('.players-select'),
         $playersList = $('.js-players-list'),
         currentTeam = null,
@@ -279,14 +278,12 @@ $(function(){
 
     $('.js-switch-to-remove-players').on('click', function(event){
         setMode(REMOVE);
-        d3_season_on_click(//updateTableau({
+        d3_season_on_click(
             //click:
             function(m){
                 membersToAdd.push(m);
                 d3_remove_member(m);
             }
-            // ,
-            // updateMembers: false}
         );
     });
     
@@ -296,7 +293,6 @@ $(function(){
             selection = d3.selectAll('svg .season')
         ;
         setMode(MOVES);
-        //d3.select('svg').classed('active', true);
         selection
             .on('click',function(d, index, nodes){
                 if( !d.id ) {
@@ -380,13 +376,9 @@ $(function(){
                 //TODO: clarify option settings
                 members = opt.members || options.members,
                 detail = options.detail,
-                reports = report_card(members, {
-                    detail:detail
-                }),
                 cardHeight = options.cardHeight
             ;
-            svg = d3.select(el).select('svg');
-            d3_draw_season(svg, reports, {'click': opt.click});
+            tableau_update(members, {click:opt.click, detail:detail});
         });
     }
     
@@ -502,7 +494,8 @@ $(function(){
         svg.attr("width", w);
 
         draw_season(svg, report_cards);
-        window.d3_draw_season = draw_season;
+        //@deprecated -> tableau_update
+        window.tableau_update = tableau_update;
         window.d3_remove_member = remove_member;
         window.d3_switch_members = switch_members;
 
@@ -608,7 +601,17 @@ $(function(){
                 sel.on('click', null);
             }
         }
-        
+
+        function tableau_update(members, opt) {
+            var opt = opt || {},
+                detail = opt.detail,
+                svg = d3.select('svg'),
+                reportCards = report_card(members, {detail:detail});
+            draw_season(svg, reportCards, opt);
+            
+        }
+
+        //internal of  d3_draw_season
         function draw_season(svg, report_cards, opt){
             var opt = opt || {},
                 click = opt.click || null,

@@ -8,6 +8,7 @@
         current_team = ""
     ;
 
+
     function init(datacsv) {
         var data = parseCSV(datacsv);
         players = data.players;
@@ -61,11 +62,9 @@
             };
             players.push(player);
         }
-
         return {players:players, teams:teams}
-
-
     }
+
 
     function extractOpposition(line) {
         var cells = line.split(','),

@@ -1,3 +1,7 @@
 (function(){
-    console.log('tableau.js loaded');
+
+    //EXPORTS
+    window.tableau = {
+        
+    };
 })()
