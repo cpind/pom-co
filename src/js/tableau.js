@@ -1,5 +1,4 @@
 (function(){
-
     
     function init(el, members, opt){
         opt.members = members;
@@ -398,6 +397,18 @@
 
     //get the members displayed
     function members(el) {
+        var data = d3.selectAll('.season')
+            .data()
+            .filter(function(d){
+                return !d._hidden;
+            });
+        if( data[0]._order != null) {
+            sortCards(data);
+        }
+        return data
+            .map(function(d){return d.id;})
+            .filter(function(m){return m;})
+        ;
     }
 
     //EXPORTS

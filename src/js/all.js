@@ -12,7 +12,7 @@ $(function(){
         $searchTeams = $('.js-search-teams'),
         totalNumberOfDays = 38,
         dataReadyDef = new $.Deferred(),
-        filterPoste = null,
+//        filterPoste = null,
         filterClub = null,
         filterName = null,
         membersToAdd = [],
@@ -67,7 +67,6 @@ $(function(){
 
     //update content of the drawer according to the search input
     $searchTeams.on('input',  function(){
-
         var rawValue = $searchTeams.val(),
             value = rawValue.toLowerCase(),
             $teams = $('.teams-drawer-content>.teams-drawer-teams'),
@@ -199,7 +198,7 @@ $(function(){
         $div.append($list);
         for( var i = 0; i < players.length; ++i){
             var player = players[i],
-                value = getPlayerUID(player),//player.nom + '('+player.team+')',
+                value = statsmpg.playerUID(player),
                 checked = members.indexOf(value) > -1 ? 'checked=true' : '';
             $list.append(
                 '<li>'
@@ -229,13 +228,7 @@ $(function(){
             });
             restoreTableau = false;
         } else if (state == MOVES) {
-            var data = d3.selectAll('.season').data();
-            sortCards(data);
-            members = data
-                .filter(function(m){return !m._hidden;})
-                .map(function(c){return c.id;})
-                .filter(function(m){return m;})
-            ;
+            members = tableau.members();
             d3.selectAll('g.season').classed('selected', false);
             restoreTableau = false;
         } else {
@@ -259,18 +252,7 @@ $(function(){
     $('.js-add-player2').on('click', function(event){
         setMode(ADD);
         excludeMembers = true;
-        var data = d3.selectAll('.season')
-            .data()
-            .filter(function(d){
-                return !d._hidden;
-            });
-        if( data[0]._order == null) {
-            sortCards(data);
-        }
-        teamMembers = data
-            .map(function(d){return d.id;})
-            .filter(function(m){return m;})
-        ;
+        teamMembers = tableau.members();
         updateTableau({click:function(m){
             membersToAdd.push(m);
             d3_remove_member(m);
@@ -323,19 +305,7 @@ $(function(){
             $('.js-done').show();
             membersToAdd = [];
         }
-        //TODO: beware of filters
-        var data = d3.selectAll('.season')
-            .data()
-            .filter(function(d){
-                return !d._hidden;
-            });
-        if( data[0]._order != null) {
-            sortCards(data);
-        }
-        teamMembers = data
-            .map(function(d){return d.id;})
-            .filter(function(m){return m;})
-        ;
+        teamMembers = tableau.members();
         if( mode == VIEW) {
             enableFilters();
         }
@@ -354,7 +324,7 @@ $(function(){
     $('.js-select-poste').on('change', function(e){
         var $el = $(e.target),
             val = $el.val();
-        filterPoste = val;
+//        filterPoste = val;
         updateTableau();
     });
 
@@ -371,7 +341,7 @@ $(function(){
 
 
     function clearFilters(){
-        filterPoste = false;
+        filterPoste(false);
         filterClub = false;
         filterName = false;
         //thanks to for select update
@@ -384,7 +354,6 @@ $(function(){
     
     function disableFilters() {
         clearFilters();
-        //and disable
         enableFilters(false);
     }
 
@@ -399,7 +368,6 @@ $(function(){
         return $('.js-team-aggregate').data('tableau-options');
     }
     
-    
     function updateTableau(opt){
         var opt = opt || {};
         $('.js-team-aggregate').each(function(index, el){
@@ -408,26 +376,24 @@ $(function(){
                 //TODO: clarify option settings
                 members = opt.members || options.members,
                 detail = options.detail,
-                cardHeight = options.cardHeight
-            ;
+                cardHeight = options.cardHeight;
             tableau_update(teamMembers, {
                 click:opt.click,
                 detail:detail,
                 excludeMembers: excludeMembers,
-                filterPoste: filterPoste,
+                filterPoste: filterPoste(),
                 filterClub: filterClub,
                 filterName: filterName
             });
         });
     }
-    
 
-    function getPlayerUID(player){
-        return statsmpg.playerUID(player);
+    //TODO: replicate to other filters
+    function filterPoste(val){
+        var args = ['val'].concat(Array.prototype.slice.call(arguments));
+        return $.fn.selectpicker.apply($('.js-select-poste'), args);
     }
 
-
-    
     //tableau
     function refreshAggregates(){
         $('.js-team-aggregate').each(function(index, el){
@@ -447,24 +413,11 @@ $(function(){
         });
     }
 
-
     function tableauInit(el, members, opt){
         return tableau.init(el,members, opt);
         // opt.members = members;
         // return drawAggregate(el, opt);
     }
-
-
-    //UTILITIES & ALIASES
-    function sortCards(cards){
-        return tableau.sortCards(cards);
-    }
-
-
-    function getPlayers(members){
-        return statsmpg.playersGet(members);
-    }
-
 
 });
 
