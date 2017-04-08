@@ -161,7 +161,8 @@
             var opt = opt || {},
                 click = opt.click || null,
                 season = svg.selectAll('g.season')
-                .data(report_cards);
+                .data(report_cards)
+                .call(transform);
             updateOptions({report_cards:report_cards});
             svg
                 .attr("height", h * report_cards.length + 2);

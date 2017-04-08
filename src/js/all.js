@@ -12,9 +12,6 @@ $(function(){
         $searchTeams = $('.js-search-teams'),
         totalNumberOfDays = 38,
         dataReadyDef = new $.Deferred(),
-//        filterPoste = null,
-        filterClub = null,
-        filterName = null,
         membersToAdd = [],
         teamMembers = []//,
         excludeMembers = false
@@ -241,10 +238,10 @@ $(function(){
             $(event.target).hide();
             $('.js-edit').show();
             excludeMembers = false;
+            setMode(VIEW);
             if( restoreTableau ) {
                 updateTableau({members:members});
             }
-            setMode(VIEW);
         }
     })
 
@@ -305,7 +302,7 @@ $(function(){
             $('.js-done').show();
             membersToAdd = [];
         }
-        teamMembers = tableau.members();
+//        teamMembers = tableau.members();
         if( mode == VIEW) {
             enableFilters();
         }
@@ -316,7 +313,6 @@ $(function(){
     $('.js-select-club').on('change', function(e){
         var $el = $(e.target),
             val = $el.val();
-        filterClub = val;
         updateTableau(); 
     });
 
@@ -324,7 +320,6 @@ $(function(){
     $('.js-select-poste').on('change', function(e){
         var $el = $(e.target),
             val = $el.val();
-//        filterPoste = val;
         updateTableau();
     });
 
@@ -335,21 +330,20 @@ $(function(){
         if(!val || val == ""){
             $el.val("");
         }
-        filterName = val;
         updateTableau()
     })
 
 
     function clearFilters(){
         filterPoste(false);
-        filterClub = false;
-        filterName = false;
+        filterClub(false);
+        filterName(false);
         //thanks to for select update
         //https://silviomoreto.github.io/bootstrap-select/methods/
         $('.js-select-poste .selectpicker').selectpicker('val', "")
         $('.js-select-club .selectpicker').selectpicker('val', "")
         $('.js-search-name').val('')
-        updateTableau();
+        updateTableau({members:teamMembers});
     }
     
     function disableFilters() {
@@ -380,10 +374,10 @@ $(function(){
             tableau_update(teamMembers, {
                 click:opt.click,
                 detail:detail,
-                excludeMembers: excludeMembers,
+                excludeMembers: (state == ADD),
                 filterPoste: filterPoste(),
-                filterClub: filterClub,
-                filterName: filterName
+                filterClub: filterClub(),
+                filterName: filterName()
             });
         });
     }
@@ -392,6 +386,17 @@ $(function(){
     function filterPoste(val){
         var args = ['val'].concat(Array.prototype.slice.call(arguments));
         return $.fn.selectpicker.apply($('.js-select-poste'), args);
+    }
+
+    function filterClub(val){
+        var args = ['val'].concat(Array.prototype.slice.call(arguments));
+        return $.fn.selectpicker.apply($('.js-select-club'), args);
+    }
+
+
+    function filterName(val){
+        var args = Array.prototype.slice.call(arguments);
+        return $.fn.val.apply($('.js-search-name'), args);
     }
 
     //tableau
