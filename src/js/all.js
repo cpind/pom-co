@@ -14,7 +14,6 @@ $(function(){
         dataReadyDef = new $.Deferred(),
         membersToAdd = [],
         teamMembers = []//,
-        excludeMembers = false
     ;
 
 
@@ -237,7 +236,6 @@ $(function(){
             teamMembers = members;
             $(event.target).hide();
             $('.js-edit').show();
-            excludeMembers = false;
             setMode(VIEW);
             if( restoreTableau ) {
                 updateTableau({members:members});
@@ -248,7 +246,6 @@ $(function(){
 
     $('.js-add-player2').on('click', function(event){
         setMode(ADD);
-        excludeMembers = true;
         teamMembers = tableau.members();
         updateTableau({click:function(m){
             membersToAdd.push(m);
@@ -302,7 +299,6 @@ $(function(){
             $('.js-done').show();
             membersToAdd = [];
         }
-//        teamMembers = tableau.members();
         if( mode == VIEW) {
             enableFilters();
         }
@@ -340,9 +336,9 @@ $(function(){
         filterName(false);
         //thanks to for select update
         //https://silviomoreto.github.io/bootstrap-select/methods/
-        $('.js-select-poste .selectpicker').selectpicker('val', "")
-        $('.js-select-club .selectpicker').selectpicker('val', "")
-        $('.js-search-name').val('')
+        // $('.js-select-poste .selectpicker').selectpicker('val', "")
+        // $('.js-select-club .selectpicker').selectpicker('val', "")
+        // $('.js-search-name').val('')
         updateTableau({members:teamMembers});
     }
     
