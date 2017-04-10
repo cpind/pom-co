@@ -237,6 +237,8 @@ $(function(){
             teamMembers = members;
             $(event.target).hide();
             $('.js-edit').show();
+            d3.select($tableau[0]).select('svg').classed('active', false);
+            d3.select($tableau[0]).select('svg').classed('inter', false);
             setMode(VIEW);
             if( restoreTableau ) {
                 updateTableau({members:members});
@@ -295,7 +297,7 @@ $(function(){
                     d3.select(this).classed('selected', false);
                     return;
                 }
-                d3_switch_members($('.js-team-aggregate')[0], active, d.id);
+                tableau.moves($tableau[0], active, d.id);
             });
     });
 
