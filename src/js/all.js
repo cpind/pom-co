@@ -366,7 +366,7 @@ $(function(){
         $('.js-team-aggregate').each(function(index, el){
             var $el = $(el),
                 options = $el.data('tableau-options'),
-                detail = options.detail,
+                detail = options.detail;
             tableau.init($tableau[0], {
                 members: teamMembers,
                 width:$(el).width(),
