@@ -16,7 +16,6 @@
         .duration(150)
         .ease(d3.easeLinear);
 
-    
     function init(el, opt){
         return drawAggregate(el, opt);
     }
@@ -37,9 +36,6 @@
             detail:detail
         });
         var x = scaleX(el);
-        // var y = d3.scaleLinear()
-	//     .domain([0, 9])
-	//     .range([h, 2]);
         svg.attr("width", w);
         draw_season(el, report_cards);
         window.tableau_update = tableau_update;
@@ -50,7 +46,6 @@
                 filterPoste = opt.filterPoste,
                 filterClub = opt.filterClub,
                 excludeMembers = opt.excludeMembers,
-                svg = d3.select('svg'),
                 reportCards = report_card(members, opt);
             draw_season(el, reportCards, opt);
             
@@ -451,8 +446,4 @@
             
         }
     }
-
-    
-
-
 })()

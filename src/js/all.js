@@ -314,7 +314,6 @@ $(function(){
         }
     }
     
-    
     //event
     $('.js-select-club').on('change', function(e){
         var $el = $(e.target),
@@ -338,7 +337,6 @@ $(function(){
         }
         updateTableau()
     })
-
 
     function clearFilters(){
         filterPoste(null);
@@ -368,17 +366,17 @@ $(function(){
         $('.js-team-aggregate').each(function(index, el){
             var $el = $(el),
                 options = $el.data('tableau-options'),
-                //TODO: clarify option settings
-                members = opt.members || options.members,
                 detail = options.detail,
-                cardHeight = options.cardHeight;
-            tableau_update(teamMembers, {
-                click:opt.click,
+            tableau.init($tableau[0], {
+                members: teamMembers,
+                width:$(el).width(),
+                height: 50,
                 detail:detail,
                 excludeMembers: (state == ADD),
                 filterPoste: filterPoste(),
                 filterClub: filterClub(),
-                filterName: filterName()
+                filterName: filterName(),
+                
             });
         });
     }
@@ -404,9 +402,7 @@ $(function(){
     function refreshAggregates(){
         $('.js-team-aggregate').each(function(index, el){
             var members = JSON.parse(el.dataset.members),
-                detail = el.dataset.detail || true;
-            if( detail == "false")
-                detail = false;
+                detail = getDetail(el);
             members = members.filter(function(m){return m;});
             teamMembers = members;
             $.when(dataReadyDef).done(function(){
@@ -420,8 +416,20 @@ $(function(){
         });
     }
 
+    function getDetail(el){
+        var detail = el.dataset.detail || true;
+        if( detail == "false")
+            detail = false;
+        return detail;
+    }
+
     function tableauInit(el, opt){
-        return tableau.init(el, opt);
+        return tableau.init(el, {
+            height: 50,
+            width: $(el).width(),
+            members: teamMembers,
+            detail: getDetail(el),
+        });
     }
 
 });
