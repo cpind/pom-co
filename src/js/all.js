@@ -176,7 +176,7 @@ $(function(){
             dataType: "json",
             data:{members:JSON.stringify(members)}
         });
-    }
+    };
 
     
     $('.js-add-player').on('click', function(event){
@@ -268,8 +268,7 @@ $(function(){
 
     $('.js-switch-to-moves-players').on('click', function(event){
         var active = null,
-            selection = d3.selectAll('svg .season')
-        ;
+            selection = d3.selectAll('svg .season');
         disableFilters();
         setMode(MOVES);
         selection
@@ -331,14 +330,9 @@ $(function(){
 
 
     function clearFilters(){
-        filterPoste(false);
-        filterClub(false);
-        filterName(false);
-        //thanks to for select update
-        //https://silviomoreto.github.io/bootstrap-select/methods/
-        // $('.js-select-poste .selectpicker').selectpicker('val', "")
-        // $('.js-select-club .selectpicker').selectpicker('val', "")
-        // $('.js-search-name').val('')
+        filterPoste(null);
+        filterClub(null);
+        filterName('');
         updateTableau({members:teamMembers});
     }
     
@@ -405,7 +399,8 @@ $(function(){
             members = members.filter(function(m){return m;});
             teamMembers = members;
             $.when(dataReadyDef).done(function(){
-                tableauInit(el, members, {
+                tableauInit(el, {
+                    members:members,
                     detail: detail,
                     height: 50,
                     width:$(el).width()
@@ -414,10 +409,8 @@ $(function(){
         });
     }
 
-    function tableauInit(el, members, opt){
-        return tableau.init(el,members, opt);
-        // opt.members = members;
-        // return drawAggregate(el, opt);
+    function tableauInit(el, opt){
+        return tableau.init(el, opt);
     }
 
 });

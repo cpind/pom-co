@@ -1,19 +1,22 @@
 (function(){
+
+    var NDAYS = 38;
+
+
+    var transition = d3.transition()
+        .duration(150)
+        .ease(d3.easeLinear);
+
     
-    function init(el, members, opt){
-        opt.members = members;
+    function init(el, opt){
         return drawAggregate(el, opt);
     }
 
-    function switchMembers(m1, m2) {
-    }
-
-        //tableau
+    //tableau
     function drawAggregate(el, opt){
         var members = opt.members,
             detail = opt.detail,
             svg = d3.select(el).append("svg"),
-            nDays = 38,
             w = opt.width || 380,
             h = opt.height || 120,
             titleWidth = 100,
@@ -28,7 +31,7 @@
             detail:detail
         });
         var x = d3.scaleLinear()
-	    .domain([0, nDays])
+	    .domain([0, NDAYS])
 	    .range([0, noteswidth()]);
         var y = d3.scaleLinear()
 	    .domain([0, 9])
@@ -36,31 +39,9 @@
         svg.attr("width", w);
 
         draw_season(svg, report_cards);
-        //@deprecated -> tableau_update
         window.tableau_update = tableau_update;
         window.d3_remove_member = remove_member;
         window.d3_switch_members = switch_members;
-
-
-        var transition = d3.transition()
-            .duration(150)
-            .ease(d3.easeLinear);
-
-        function initCardOrder(data){
-            data.forEach(function(c, i){
-                c._order = i;
-            });
-        }
-
-        function findCard(data, member){
-            for( var i = 0; i < data.length; i++){
-                var id = data[i].id;
-                if( id == member ) {
-                    return i;
-                }
-            }
-            return -1;
-        }
 
 
         function switch_members(m1, m2){
@@ -318,12 +299,6 @@
         }
     }
 
-    function sortCards(cards){
-        cards.sort(function(d1, d2){
-            return d1._order - d2._order;
-        });            
-    }
-
     function report_card(members, opt){
         var detail = opt.detail || false,
             exclude = opt.excludeMembers || false,
@@ -411,6 +386,31 @@
             .filter(function(m){return m;})
         ;
     }
+
+    function initCardOrder(data){
+        data.forEach(function(c, i){
+            c._order = i;
+        });
+    }
+
+
+    function findCard(data, member){
+        for( var i = 0; i < data.length; i++){
+            var id = data[i].id;
+            if( id == member ) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+
+    function sortCards(cards){
+        cards.sort(function(d1, d2){
+            return d1._order - d2._order;
+        });            
+    }
+
 
     //EXPORTS
     window.tableau = {
