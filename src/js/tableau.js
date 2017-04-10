@@ -44,40 +44,6 @@
         window.d3_switch_members = switch_members;
 
 
-        function switch_members(m1, m2){
-            var tr2 = selectMember(m2)
-                .attr('transform'),
-                data = svg.selectAll('g.season').data();
-            selectMember(m1)
-                .transition(transition)
-                .attr('transform', tr2);
-            //data with order
-            if( data[0]._order == null) {
-                initCardOrder(data);
-            }
-            sortCards(data);
-            //find members position
-            var i1 = findCard(data, m1),
-                i2 = findCard(data, m2);
-            //switch the position
-            var data1 = data.splice(i1,1)[0];
-            data.splice(i2, 0, data1);
-            initCardOrder(data);
-            //transform
-            svg
-                .selectAll('g.season')
-                .each(function(d, i, nodes){
-                    newindex = d._order;
-                    transform(d3.select(this)
-                              .transition(transition), newindex);
-                });
-        }
-
-        function selectMember(m) {
-            return svg
-                .select("#" + uid_to_id(m));
-        }
-
         function remove_member(member) {
             svg.select("#" + uid_to_id(member))
                 .remove();
@@ -91,17 +57,9 @@
             svg
                 .selectAll('g.season')
                 .transition(transition)
-                .call(transform);
+                .call(transform($el));
         }
 
-
-        function uid_to_id(member){
-            if( !member ) {return "";}
-            var id_tokens = 
-                member.split(/[\(\)\ \.]+/);
-            id_tokens = id_tokens.filter(function (t){ return t;})
-            return id_tokens.join("__");
-        }
 
         window.d3_season_on_click = function(listener){
             var svg = d3.select('svg'),
@@ -143,7 +101,7 @@
                 click = opt.click || null,
                 season = svg.selectAll('g.season')
                 .data(report_cards)
-                .call(transform);
+                .call(transform(el));
             updateOptions({report_cards:report_cards});
             svg
                 .attr("height", h * report_cards.length + 2);
@@ -152,7 +110,7 @@
                 .append('g')
                 .attr('class', 'season')
                 .call(setSize)
-                .call(transform);
+                .call(transform(el));
 
             enter.merge(season)
                 .attr('id', function(d){return uid_to_id(d.id);})
@@ -206,24 +164,6 @@
         }
 
 
-        function transform(sel, i){
-            var y = function(index){
-                return index * h;
-            }
-            if( i != null) {
-                y = function(){
-                    return i * h;
-                }
-            }
-            return sel.attr('transform', function(d, i) {
-                var ii = i;
-                if( d._order != null) {
-                    ii = d._order;
-                }
-                return "translate(0, " + y(ii) + ")";
-            })
-        }
-        
         function setSize(sel){
             sel.attr('width', w)
                 .attr('height', h);
@@ -411,7 +351,83 @@
         });            
     }
 
+    function switch_members(el, m1, m2){
+        var svg = d3.select(el)
+            .select('svg'),
+            tr2 = selectMember(svg, m2)
+            .attr('transform'),
+            data = svg.selectAll('g.season').data();
+            
+        selectMember(svg, m1)
+            .transition(transition)
+            .attr('transform', tr2);
+        //data with order
+        if( data[0]._order == null) {
+            initCardOrder(data);
+        }
+        sortCards(data);
+        //find members position
+        var i1 = findCard(data, m1),
+            i2 = findCard(data, m2);
+        //switch the position
+        var data1 = data.splice(i1,1)[0];
+        data.splice(i2, 0, data1);
+        initCardOrder(data);
+        //transform
+        svg.selectAll('g.season')
+            .each(function(d, i, nodes){
+                newindex = d._order;
+                transform(el)(d3.select(this)
+                          .transition(transition), newindex);
+            });
+    }
 
+
+    function options(el, prop) {
+        var $el = (el.jquery) ? el : $(el),
+            opts =  $el.data('tableau-options');
+        return opts[prop];
+    }
+    
+    function transform(el){
+        var h = options(el, 'cardHeight');
+        return function(sel, i){
+            var y = function(index){
+                    return index * h;
+                }
+            if( i != null) {
+                y = function(){
+                    return i * h;
+                }
+            }
+            return sel.attr('transform', function(d, i) {
+                var ii = i;
+                if( d._order != null) {
+                    ii = d._order;
+                }
+                return "translate(0, " + y(ii) + ")";
+            })
+        };
+    }
+    
+
+
+    function selectMember(svg, m) {
+        return svg
+            .select("#" + uid_to_id(m));
+    }
+
+
+    function uid_to_id(member){
+        if( !member ) {return "";}
+        var id_tokens = 
+            member.split(/[\(\)\ \.]+/);
+        id_tokens = id_tokens.filter(function (t){ return t;})
+        return id_tokens.join("__");
+    }
+
+
+    
     //EXPORTS
     window.tableau = {
         init:init,

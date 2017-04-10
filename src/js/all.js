@@ -286,7 +286,7 @@ $(function(){
                     d3.select(this).classed('selected', false);
                     return;
                 }
-                d3_switch_members(active, d.id);
+                d3_switch_members($('.js-team-aggregate')[0], active, d.id);
             });
     });
 
