@@ -1,0 +1,16 @@
+*~
+\#*#
+*#
+*__pycache__*
+less/*.css
+mysite/db.sqlite3
+\.\#*
+*.pyc
+.env
+venv
+staticfiles
+\.DS_Store
+.cache
+
+#api credentials
+mtb.json
