@@ -8,6 +8,7 @@ $(function(){
     var url = window.pomcodata,
         $playserSelect = $('.players-select'),
         $playersList = $('.js-players-list'),
+        $tableau = $('.js-team-aggregate'),
         currentTeam = null,
         $searchTeams = $('.js-search-teams'),
         totalNumberOfDays = 38,
@@ -247,22 +248,30 @@ $(function(){
     $('.js-add-player2').on('click', function(event){
         setMode(ADD);
         teamMembers = tableau.members();
-        updateTableau({click:function(m){
-            membersToAdd.push(m);
-            d3_remove_member(m);
-        }});
+        tableau.complement($tableau, true);
+        d3.select($tableau[0]).select('svg').classed('active', true);
+        d3.select($tableau[0])
+            .selectAll('svg g.season')
+            .on("click", function(d, index, node){
+                var m = d.id;
+                if( !m ) return;
+                membersToAdd.push(m);
+                tableau.remove($tableau, m);
+            });
     });
 
 
     $('.js-switch-to-remove-players').on('click', function(event){
         setMode(REMOVE);
-        d3_season_on_click(
-            //click:
-            function(m){
+        d3.select($tableau[0]).select('svg').classed('active', true);
+        d3.select($tableau[0])
+            .selectAll('svg g.season')
+            .on("click", function(d, index, node){
+                var m = d.id;
+                if( !m ) return;
                 membersToAdd.push(m);
-                d3_remove_member(m);
-            }
-        );
+                tableau.remove($tableau, m);
+            });
     });
     
 
