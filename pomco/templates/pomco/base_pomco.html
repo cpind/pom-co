@@ -4,11 +4,15 @@
 {% block topbar_content %}
 
 {% include 'pomco/topbar.html' %}
-
 {% include 'pomco/teams_drawer.html'%}
 
-{% if user.is_email_confirmed == False%}
+{% if not user.is_authenticated %}
+<div class="alert alert-warning">
+  Please <a href="{% url 'signup'%}">signup</a> or <a href="{% url 'login'%}">login</a> to create your own tableau.
+</div>
+{% endif %}
 
+{% if user.is_email_confirmed == False%}
 <div class="alert alert-warning">
   Please confirm your email address
   <a href="{% url 'send_email_confirmation_mail' %}" class="js-send-email-confirmation-mail">Resend email.</a>

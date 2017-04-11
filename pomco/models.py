@@ -35,6 +35,9 @@ class Team(models.Model):
     def to_json(self):
         return json.dumps(self.to_dict())
 
+    def url_id(self):
+        return '$' + str(self.id)
+    
     def url(self):
         return reverse('team', kwargs={'team_id': '$' + str(self.id)})
 

@@ -10,7 +10,17 @@
 
 
     function init(datacsv) {
-        var data = parseCSV(datacsv);
+        var data = {};
+        if( typeof(datacsv) == 'string' ) {
+            data = parseCSV(datacsv);
+        } else if( typeof(datacsv) == 'object') {
+            var playerscsv = datacsv.playerscsv,
+                teamscsv = datacsv.teamscsv;
+            data = {
+                players: parsePlayers(playerscsv)
+//                teams: parseTeams(teamscsv)
+            }
+        }
         for( var i = 0; i < data.players.length; ++i ) {
             players.push(data.players[i]);
         }
@@ -24,6 +34,27 @@
 
     function playerUID(player) {
         return player.nom + '(' + player.team + ')';                              
+    }
+
+    function parsePlayers(data) {
+        var players = [],
+            lines = data.split('\n'),
+            header = lines.splice(0, 1)[0],
+            columns = header.split(',');
+        for( var i = 0; i < lines.length; ++i ) {
+            var line = lines[i],
+                player = {},
+                split = line.split(',');
+            for( var c = 0; c < 6; ++c){
+                player[columns[c]] = split[c];
+            }
+            player.notes = parseNotes(split);
+            if( player.team in pl_short_name ) {
+                player.team = pl_short_name[player.team];
+            }
+            players.push(player);
+        }
+        return players;
     }
 
 
@@ -52,7 +83,7 @@
             }
             if( ! (new RegExp("^[GDMA],")).test(line)) continue;
             var split = line.split(",");
-            var notes = parseNotes(split, line);
+            var notes = parseNotes(split);
             var player = {
                 poste: split[0],
                 nom: split[1],
@@ -93,10 +124,9 @@
     }
 
 
-    function parseNotes(split, line) {
-        var formattedNotes = line.split(','),
-            notes = [];
-        for( var i = 6; i < formattedNotes.length; ++i ) {
+    function parseNotes(split) {
+        var notes = [];
+        for( var i = 6; i < split.length; ++i ) {
             var formattedNote = split[i],
                 noteTokens = formattedNote.split(/[\(\)]/),
                 note = parseFloat(noteTokens[0]),
@@ -131,8 +161,9 @@
 
     function meansByDay(playerIds) {
         var players = playersGet(playerIds),
-            days = [];
-        for( var i = 0; i < 38; ++i) {
+            days = [],
+            ndays = Math.min(38, players[0].notes.length - 1);
+        for( var i = 0; i < ndays; ++i ) {
             var agg = 0,
                 count = 0;
             for( var p = 0; p < players.length; ++p) {
@@ -148,6 +179,22 @@
         }
         return days;
     }
+
+    var pl_short_name = {
+        "B": "Burnley FC",
+        "S": "Swansea City AFC",
+        "P": "Crystal Palace",
+        "WBA": "West Bromwich Albion",
+        "E": "Everton FC",
+        "T": "Tottenham Hotspurs",
+        "W": "West Ham United",
+        "H": "Hull City",
+        "L": "Leicester City",
+        "M": "Manchester City",
+        "A": "Arsenal FC",
+        "C": "Chelsea FC"
+    };
+    
     
     //EXPORTS
     window.statsmpg = {

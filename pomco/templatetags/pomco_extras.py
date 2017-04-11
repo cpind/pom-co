@@ -18,3 +18,10 @@ def one_error(form):
 @register.simple_tag
 def pomco_name():
     return "Pomco"
+
+@register.simple_tag
+def disabled_if_not_logged_in(user):
+    if user.is_authenticated():
+        return ""
+    return "disabled=True"
+    

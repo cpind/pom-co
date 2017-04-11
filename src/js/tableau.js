@@ -24,7 +24,6 @@
     function drawAggregate(el, opt){
         var members = opt.members,
             detail = opt.detail,
-            svg = d3.select(el).append("svg"),
             w = opt.width || 380,
             h = opt.height || 120,
             $el = $(el);
@@ -40,7 +39,13 @@
             cardWidth:w,
             detail:detail
         });
+        svg = d3.select(el).select('svg');
+        if( !svg.size() ) {
+            svg = d3.select(el)
+                .append('svg')
+        }
         svg.attr("width", w);
+
         draw_season(el, report_cards);
     }
 
@@ -149,7 +154,8 @@
             h = options(el, "cardHeight"),
             w = options(el, "cardWidth"),
             season = svg.selectAll('g.season')
-            .data(report_cards)
+            .data(function(){
+                return report_cards;})
             .call(transform(el)),
             draw = draw_entered(el);
         updateOptions({report_cards:report_cards});

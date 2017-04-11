@@ -15,7 +15,13 @@
     <script src="{% static "js/statsmpg.js"%}"></script>
     
     <!-- data url -->
-    <script> window.pomcodata = "{% url 'stats' stats='l1mpg' %}" </script>
+    <script>
+      window.pomcodata = "{% url 'stats' stats='l1mpg' %}"
+      window.l1statsmpg = {
+      playersurl:"{% url 'stats' stats=stats table='players'%}",
+      teamsurl:"{% url 'stats' stats=stats  table='teams'%}"
+      }
+    </script>
 
     <!-- style -->
     <link href="{% static 'less/style.css'%}"

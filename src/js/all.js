@@ -5,8 +5,7 @@ $(function(){
     });
 
     
-    var url = window.pomcodata,
-        $playserSelect = $('.players-select'),
+    var $playserSelect = $('.players-select'),
         $playersList = $('.js-players-list'),
         $tableau = $('.js-team-aggregate'),
         currentTeam = null,
@@ -34,10 +33,11 @@ $(function(){
 
     $.ajax({
         type: "GET",
-        url: url,
+        cache:false,
+        url: window.l1statsmpg.playersurl,
         dataType: "text",
         success: function(datacsv) {
-            statsmpg.init(datacsv);
+            statsmpg.init({playerscsv:datacsv});
             players = statsmpg.playersAll;
             dataReadyDef.resolve();
         }

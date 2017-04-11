@@ -23,11 +23,14 @@ from .models import Team, MyUser
 from .forms import *
 
 logger = logging.getLogger(__name__)
+_stats_entries = ['l1mpg', 'l1lequipe', 'plmpg']
 
+#Can't use reverse here, causes django to break on circular import
+@login_required(login_url='/t/all', redirect_field_name=None)
 def index(request):
     context = _get_teams_lists()
-#    print("email confirmed: " + request.user.is_email_confirmed)
     return render(request, "pomco/index.html", context)
+
 
 def update_team(request, team):
     #todo update other fields if provided
@@ -35,6 +38,7 @@ def update_team(request, team):
     team.members = request.POST['members']
     team.save()
     return JsonResponse(team.to_dict())
+
 
 def team_all(request, team_id):
     team = _team_all()
@@ -47,14 +51,17 @@ def team_all(request, team_id):
     context.update(_get_teams_lists())
     return render(request, "pomco/team.html", context)
 
+
 def _team_all():
     return {
         'id':'all',
         'team_name':'All',
         'members':'["*"]',
+        'url_id':'all',
         'url': reverse('team', kwargs={'team_id':'all'}),
         'type':'standard', 
     }
+
 
 def _get_teams_lists():
     return {
@@ -62,14 +69,21 @@ def _get_teams_lists():
         'standard_teams_list': [_team_all()],
     }
 
+
 def _get_team(id):
     return {
         'all':_team_all()
     }.get(id)
 
 
-def team(request, team_id):
+
+
+def team(request, team_id, stats='l1mpg'):
+    if stats not in _stats_entries:
+        raise Http404()
     if team_id.startswith('$'):
+        if not request.user.is_authenticated():
+            return HttpResponseRedirect('/t/all')
         team_id = team_id[1:]
         team = get_object_or_404(Team, pk=team_id)
     else:
@@ -82,7 +96,8 @@ def team(request, team_id):
         'team':team,
         'editable':True,
         'detail_team_list':[team],
-        'detail':True
+        'detail':True,
+        'stats':stats,
     }
     context.update(_get_teams_lists())
     return render(request, "pomco/team.html", context)
@@ -108,15 +123,20 @@ def members(request, team_id):
     return JsonResponse(team.members)
 
 
-def _statspath(stats):
-    if stats in ['l1mpg', 'l1lequipe', 'plmpg']:
-        return '{}/{}/{}'.format('pomco/statsl1mpg', stats, "data.csv")
+def _statspath(stats, table=None):
+    fname = {
+        'players':'players.csv',
+        'teams':'teams.csv',
+        None:'data.csv',
+    }.get(table, None)
+    if fname is not None and stats in _stats_entries:
+        return '{}/{}/{}'.format('pomco/statsl1mpg', stats, fname)
     return None
 
 
-def stats(request, stats):
+def stats(request, stats, table=None):
     branch = "master"
-    path = _statspath(stats)
+    path = _statspath(stats, table)
     if path is None:
         raise Http404()
     completeprocess = subprocess.run(
@@ -124,6 +144,8 @@ def stats(request, stats):
         stdout=subprocess.PIPE,
         encoding="utf-8",
     )
+    print(table)
+    print(path)
     return HttpResponse(completeprocess.stdout, content_type='text/csv')
     
 
@@ -151,10 +173,12 @@ def confirm_email(request):
         return render(request, "unable_to_confirm_mail.html")
     return redirect('index')
 
+
 @login_required
 def send_email_confirmation_mail(request):
     send_email_confirmation(request.user)
     return redirect('index')
+
 
 @login_required
 def profile(request, password_form = None):
@@ -170,8 +194,8 @@ def profile(request, password_form = None):
 
     if password_form is None:
         password_form = PasswordForm()
-
     return render(request, "pomco/profile.html", {'form': form, 'password_form':password_form})
+
 
 @login_required
 def change_password(request):
@@ -183,10 +207,12 @@ def change_password(request):
             request.user.set_password(password)
     return profile(request, password_form=form)
 
+
 def logout_view(request):
     logout(request)
     print("logging out")
     return redirect('index')
+
 
 def send_email_confirmation(user):
     logger.info("send confirmation email to:" + user.email)
