@@ -162,7 +162,10 @@
     function meansByDay(playerIds) {
         var players = playersGet(playerIds),
             days = [],
+            ndays = 38;
+        if( players.length > 0) {
             ndays = Math.min(38, players[0].notes.length - 1);
+        }
         for( var i = 0; i < ndays; ++i ) {
             var agg = 0,
                 count = 0;
@@ -181,18 +184,18 @@
     }
 
     var pl_short_name = {
-        "B": "Burnley FC",
-        "S": "Swansea City AFC",
+        "B": "Burnley",
+        "S": "Swansea",
         "P": "Crystal Palace",
         "WBA": "West Bromwich Albion",
-        "E": "Everton FC",
-        "T": "Tottenham Hotspurs",
-        "W": "West Ham United",
+        "E": "Everton",
+        "T": "Tottenham",
+        "W": "West Ham",
         "H": "Hull City",
-        "L": "Leicester City",
+        "L": "Leicester",
         "M": "Manchester City",
-        "A": "Arsenal FC",
-        "C": "Chelsea FC"
+        "A": "Arsenal",
+        "C": "Chelsea"
     };
     
     

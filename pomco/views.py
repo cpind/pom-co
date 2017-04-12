@@ -27,14 +27,17 @@ _stats_entries = ['l1mpg', 'l1lequipe', 'plmpg']
 
 #Can't use reverse here, causes django to break on circular import
 @login_required(login_url='/t/all', redirect_field_name=None)
-def index(request):
-    context = _get_teams_lists()
+def index(request, stats=None):
+    if stats is None:
+        return HttpResponseRedirect(reverse('ligueoverview',kwargs={'stats':'l1mpg'}))
+    request.session['stats'] = stats
+    context = _get_teams_lists(request,stats)
+    context['stats'] = stats
     return render(request, "pomco/index.html", context)
 
 
 def update_team(request, team):
     #todo update other fields if provided
-    print("update team")
     team.members = request.POST['members']
     team.save()
     return JsonResponse(team.to_dict())
@@ -48,25 +51,38 @@ def team_all(request, team_id):
         'detail_team_list': [team],
         'editable': False
     }
-    context.update(_get_teams_lists())
+    context.update(_get_teams_lists(request))
     return render(request, "pomco/team.html", context)
 
 
-def _team_all():
+def _team_all(stats='l1mpg'):
     return {
         'id':'all',
         'team_name':'All',
         'members':'["*"]',
         'url_id':'all',
-        'url': reverse('team', kwargs={'team_id':'all'}),
+        'url': reverse('team', kwargs={'team_id':'all', 'stats':stats}),
         'type':'standard', 
     }
 
 
-def _get_teams_lists():
+def _league(stats):
     return {
-        'team_list': Team.objects.all(),
-        'standard_teams_list': [_team_all()],
+        'l1mpg':Team.L1,
+        'l1lequipe':Team.L1,
+        'plmpg':Team.PL
+    }.get(stats)
+
+
+def _get_teams_lists(request, stats='l1mpg'):
+    team_list = []
+    if request.user.is_authenticated():
+        team_list = Team.objects.filter(league=_league(stats),user=request.user)
+    for t in team_list:
+        t.url = reverse('team', kwargs={'team_id':t.url_id(), 'stats':stats})
+    return {
+        'team_list': team_list,
+        'standard_teams_list': [_team_all(stats)],
     }
 
 
@@ -76,14 +92,20 @@ def _get_team(id):
     }.get(id)
 
 
-
-
-def team(request, team_id, stats='l1mpg'):
+def team(request, team_id, stats=None):
+    if stats is None:
+        if 'stats' in request.session:
+            stats = request.session['stats']
+        else:
+            stats = 'l1mpg'
+        return HttpResponseRedirect(reverse('team', kwargs={'stats':stats, 'team_id':team_id}))
+    request.session['stats'] = stats
+    request.session['team_id'] = team_id
     if stats not in _stats_entries:
         raise Http404()
     if team_id.startswith('$'):
         if not request.user.is_authenticated():
-            return HttpResponseRedirect('/t/all')
+            return HttpResponseRedirect(reverse('team', kwargs={'stats':stats, 'team_id':'all'}))
         team_id = team_id[1:]
         team = get_object_or_404(Team, pk=team_id)
     else:
@@ -99,16 +121,18 @@ def team(request, team_id, stats='l1mpg'):
         'detail':True,
         'stats':stats,
     }
-    context.update(_get_teams_lists())
+    context.update(_get_teams_lists(request, stats))
     return render(request, "pomco/team.html", context)
 
 
 def create(request):
+    stats = request.session['stats']
     t = Team()
     t.team_name = request.POST['team_name']
     t.user = request.user
+    t.league = _league(stats)
     t.save()
-    return HttpResponseRedirect(reverse('index'))
+    return HttpResponseRedirect(reverse('ligueoverview',kwargs={'stats':stats}))
 
 
 def delete(request):
@@ -144,8 +168,6 @@ def stats(request, stats, table=None):
         stdout=subprocess.PIPE,
         encoding="utf-8",
     )
-    print(table)
-    print(path)
     return HttpResponse(completeprocess.stdout, content_type='text/csv')
     
 
@@ -184,9 +206,7 @@ def send_email_confirmation_mail(request):
 def profile(request, password_form = None):
     user = request.user
     if request.method == 'POST' and password_form is None:
-        print(password_form)
         form = MyUserForm(request.POST, instance=user)
-        print("profile is valid : " + str(form.is_valid()))
         if form.is_valid():
             form.save()
     else:
@@ -210,7 +230,6 @@ def change_password(request):
 
 def logout_view(request):
     logout(request)
-    print("logging out")
     return redirect('index')
 
 

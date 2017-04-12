@@ -17,10 +17,12 @@
     <!-- data url -->
     <script>
       window.pomcodata = "{% url 'stats' stats='l1mpg' %}"
+      {% if stats %}
       window.l1statsmpg = {
       playersurl:"{% url 'stats' stats=stats table='players'%}",
       teamsurl:"{% url 'stats' stats=stats  table='teams'%}"
       }
+      {% endif %}
     </script>
 
     <!-- style -->

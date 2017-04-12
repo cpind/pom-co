@@ -30,18 +30,19 @@ $(function(){
     //initial state
     $('.js-done').hide();
     
-
-    $.ajax({
-        type: "GET",
-        cache:false,
-        url: window.l1statsmpg.playersurl,
-        dataType: "text",
-        success: function(datacsv) {
-            statsmpg.init({playerscsv:datacsv});
-            players = statsmpg.playersAll;
-            dataReadyDef.resolve();
-        }
-    });
+    if( window.l1statsmpg ) {
+        $.ajax({
+            type: "GET",
+            cache:false,
+            url: window.l1statsmpg.playersurl,
+            dataType: "text",
+            success: function(datacsv) {
+                statsmpg.init({playerscsv:datacsv});
+                players = statsmpg.playersAll;
+                dataReadyDef.resolve();
+            }
+        });
+    }
 
 
     $('.js-teams-menu').on('click', function(){

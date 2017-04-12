@@ -6,6 +6,7 @@ from .forms import MyAuthenticationForm, MyPasswordResetForm
 
 urlpatterns = [
     url(r'^$', views.index, name='index'),
+    url(r'^l/(?P<stats>[a-z0-9]+)$', views.index, name='ligueoverview'),
     url(r'^create$', views.create, name='create'),
     url(r'^delete$', views.delete, name='delete'),
     url(r'^t/(?P<team_id>.+)/$', views.team, name='team'),

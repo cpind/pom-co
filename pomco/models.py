@@ -21,6 +21,15 @@ class Team(models.Model):
 
     user = models.ForeignKey(auth_user_model)
 
+    #leagues
+    L1 = 'L1'
+    PL = 'PL'
+    LEAGUE_CHOICES = ((L1, 'League 1'), (PL, 'Premier League'))
+    league = models.CharField(
+        max_length=2,
+        choices=LEAGUE_CHOICES,
+        default=L1,)
+
     def __str__(self):
         """returns a string representation of the team"""
         return "%s: %s" %(self.id, self.team_name)
