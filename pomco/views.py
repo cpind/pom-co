@@ -19,6 +19,7 @@ import json
 import logging
 import subprocess
 
+from pomco import L1, PL
 from .models import Team, MyUser
 from .forms import *
 
@@ -68,9 +69,9 @@ def _team_all(stats='l1mpg'):
 
 def _league(stats):
     return {
-        'l1mpg':Team.L1,
-        'l1lequipe':Team.L1,
-        'plmpg':Team.PL
+        'l1mpg':L1,
+        'l1lequipe':L1,
+        'plmpg':PL
     }.get(stats)
 
 

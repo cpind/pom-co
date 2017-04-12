@@ -1,4 +1,5 @@
 {% extends 'pomco/base_pomco.html'%}
+{% load pomco_extras %}
 
 {% block content %}
 <div class="row">
@@ -16,26 +17,27 @@
           </select>
           <select class="js-select-club selectpicker" data-width="100px">
             <option value="">Clubs</option>
-            <option value="SCO">Angers</option>
-            <option value="SCB">Bastia</option>
-            <option value="FCGB">Bordeaux</option>
-            <option value="SMC">Caen</option>
-            <option value="DFCO">Dijon</option>
-            <option value="EAG">Guingamp</option>
-            <option value="LOSC">Lille</option>
-            <option value="FCL">Lorient</option>
-            <option value="OL">Lyon</option>
-            <option value="OM">Marseille</option>
-            <option value="FCM">Metz</option>
-            <option value="ASM">Monaco</option>
-            <option value="MHSC">Montpellier</option>
-            <option value="ASNL">Nancy</option>
-            <option value="FCN">Nantes</option>
-            <option value="OGCN">Nice</option>
-            <option value="PSG">Paris</option>
-            <option value="SRFC">Rennes</option>
-            <option value="ASSE">Saint Etienne</option>
-            <option value="TFC">Toulouse</option>
+            {% clubsoptions stats %}
+            <!-- <option value="SCO">Angers</option> -->
+            <!-- <option value="SCB">Bastia</option> -->
+            <!-- <option value="FCGB">Bordeaux</option> -->
+            <!-- <option value="SMC">Caen</option> -->
+            <!-- <option value="DFCO">Dijon</option> -->
+            <!-- <option value="EAG">Guingamp</option> -->
+            <!-- <option value="LOSC">Lille</option> -->
+            <!-- <option value="FCL">Lorient</option> -->
+            <!-- <option value="OL">Lyon</option> -->
+            <!-- <option value="OM">Marseille</option> -->
+            <!-- <option value="FCM">Metz</option> -->
+            <!-- <option value="ASM">Monaco</option> -->
+            <!-- <option value="MHSC">Montpellier</option> -->
+            <!-- <option value="ASNL">Nancy</option> -->
+            <!-- <option value="FCN">Nantes</option> -->
+            <!-- <option value="OGCN">Nice</option> -->
+            <!-- <option value="PSG">Paris</option> -->
+            <!-- <option value="SRFC">Rennes</option> -->
+            <!-- <option value="ASSE">Saint Etienne</option> -->
+            <!-- <option value="TFC">Toulouse</option> -->
           </select>
           {% if team.editable %}
           <div class="dropdown btn-group js-edit">

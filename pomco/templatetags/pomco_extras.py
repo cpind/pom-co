@@ -2,6 +2,8 @@ from django import template
 from django.core.urlresolvers import reverse
 from pomco.views import _league
 from pomco.models import Team
+from pomco.clubs import CLUBS
+import pomco
 
 register = template.Library()
 
@@ -20,7 +22,7 @@ def one_error(form):
     
 @register.simple_tag
 def pomco_name():
-    return "Pomco"
+    return "Mon Beau Tableau"
 
 @register.simple_tag
 def disabled_if_not_logged_in(user):
@@ -38,3 +40,22 @@ def ligue_landing(stats, team):
             return reverse('team', kwargs={'stats':stats, 'team_id':team.url_id()})
         return reverse('ligueoverview', kwargs={'stats':stats})
     return reverse('team', kwargs={'stats':stats, 'team_id':team['url_id']})
+
+
+@register.inclusion_tag('pomco/clubs_selectoptions.html')
+def clubsoptions(stats):
+    clubs = []
+    context = {
+        'clubs':clubs
+    }
+    l = _league(stats)
+    for club in CLUBS[l]:
+        clubs.append({
+            'value':club,
+            'name':CLUBS[l][club],
+        })
+    if l == pomco.PL:
+        for club in clubs:
+            club['name']=club['value']
+    print(clubs)
+    return context

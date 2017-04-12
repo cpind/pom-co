@@ -6,6 +6,7 @@ from django.contrib.auth.models import (
 from django.core.urlresolvers import reverse
 from django.utils import timezone
 import json
+from pomco import L1, PL
 
 
 class Team(models.Model):
@@ -22,8 +23,8 @@ class Team(models.Model):
     user = models.ForeignKey(auth_user_model)
 
     #leagues
-    L1 = 'L1'
-    PL = 'PL'
+    # L1 = 'L1'
+    # PL = 'PL'
     LEAGUE_CHOICES = ((L1, 'League 1'), (PL, 'Premier League'))
     league = models.CharField(
         max_length=2,
