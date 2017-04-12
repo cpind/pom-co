@@ -29,7 +29,7 @@ _stats_entries = ['l1mpg', 'l1lequipe', 'plmpg']
 @login_required(login_url='/t/all', redirect_field_name=None)
 def index(request, stats=None):
     if stats is None:
-        return HttpResponseRedirect(reverse('ligueoverview',kwargs={'stats':'l1mpg'}))
+        return HttpResponseRedirect(reverse('ligueoverview',kwargs={'stats':_defaultstats(request)}))
     request.session['stats'] = stats
     context = _get_teams_lists(request,stats)
     context['stats'] = stats
@@ -92,12 +92,16 @@ def _get_team(id):
     }.get(id)
 
 
+def _defaultstats(request):
+    if 'stats' in request.session:
+        return request.session['stats']
+    else:
+        return 'l1mpg'
+    
+
 def team(request, team_id, stats=None):
     if stats is None:
-        if 'stats' in request.session:
-            stats = request.session['stats']
-        else:
-            stats = 'l1mpg'
+        stats = _defaultstats(request)
         return HttpResponseRedirect(reverse('team', kwargs={'stats':stats, 'team_id':team_id}))
     request.session['stats'] = stats
     request.session['team_id'] = team_id
