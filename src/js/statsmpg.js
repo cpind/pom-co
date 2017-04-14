@@ -10,23 +10,25 @@
 
 
     function init(datacsv) {
-        var data = {};
+        var data = {},
+            i, p, uid,
+            playerscsv, teamscsv;
         if( typeof(datacsv) == 'string' ) {
             data = parseCSV(datacsv);
         } else if( typeof(datacsv) == 'object') {
-            var playerscsv = datacsv.playerscsv,
-                teamscsv = datacsv.teamscsv;
+            playerscsv = datacsv.playerscsv;
+            teamscsv = datacsv.teamscsv;
             data = {
                 players: parsePlayers(playerscsv)
 //                teams: parseTeams(teamscsv)
-            }
+            };
         }
-        for( var i = 0; i < data.players.length; ++i ) {
+        for(i = 0; i < data.players.length; ++i ) {
             players.push(data.players[i]);
         }
-        for( var i = 0; i < players.length; ++i ) {
-            var p = players[i],
-                uid = playerUID(p);
+        for(i = 0; i < players.length; ++i ) {
+            p = players[i];
+            uid = playerUID(p);
             playersIndex[uid] = p;
         }
     };
@@ -40,18 +42,19 @@
         var players = [],
             lines = data.split('\n'),
             header = lines.splice(0, 1)[0],
-            columns = header.split(',');
-        for( var i = 0; i < lines.length; ++i ) {
-            var line = lines[i],
-                player = {},
-                split = line.split(',');
-            for( var c = 0; c < 6; ++c){
+            columns = header.split(','),
+            i, line, player, split, c;
+        for(i = 0; i < lines.length; ++i ) {
+            line = lines[i];
+            player = {};
+            split = line.split(',');
+            for(c = 0; c < 6; ++c){
                 player[columns[c]] = split[c];
             }
             player.notes = parseNotes(split);
-            if( player.team in pl_short_name ) {
-                player.team = pl_short_name[player.team];
-            }
+            // if( player.team in pl_short_name ) {
+            //     player.team = pl_short_name[player.team];
+            // }
             players.push(player);
         }
         return players;
@@ -95,15 +98,17 @@
             };
             players.push(player);
         }
-        return {players:players, teams:teams}
+        return {players:players, teams:teams};
     }
 
 
     function extractOpposition(line) {
         var cells = line.split(','),
-            days = [];            
-        for(var i = 0; i < cells.length; ++i) {
-            var cell = cells[i];
+            days = [],
+            i, cell, team
+        ;
+        for(i = 0; i < cells.length; ++i) {
+            cell = cells[i];
             if( !(new RegExp("J[0-9]{2}")).test(cell) ) continue;
             var tokens = cell.split(/[:\ \(\)]/)
                 .filter(function(s){
@@ -115,8 +120,8 @@
                 opponentTeam: tokens[2]
             });
         }
-        for(var i = 0; i < teams.length; ++i){
-            var team = teams[i];
+        for( i = 0; i < teams.length; ++i){
+            team = teams[i];
             if( team.short_name === current_team ) {
                 team.days = days;
             }
@@ -128,19 +133,20 @@
         var notes = [];
         for( var i = 6; i < split.length; ++i ) {
             var formattedNote = split[i],
-                noteTokens = formattedNote.split(/[\(\)]/),
+                noteTokens = formattedNote.split(/[:]/),
                 note = parseFloat(noteTokens[0]),
                 goals = parseFloat(noteTokens[1]);
             if( isNaN(note) ){
-                note = 0;
-            }
-            if( isNaN(goals) ) {
-                goals = 0;
+                note = null;
             }
             if( noteTokens[0] == "<"){
                 note = "<";
             }
-            notes.push({note:note, goals:goals});
+            notes.push({
+                entered: noteTokens[0] == "<",
+                note:note
+                //TODO add goals / owngoals property
+            });
         }
         return notes;
     }
@@ -177,26 +183,31 @@
                     count += 1;
                 }
             }
-            if( players.length ) agg /= count;
+            if( count ) agg /= count;
+            if( isNaN(agg) ) {
+                agg =0;
+            }
             days.push(agg);
         }
         return days;
     }
 
-    var pl_short_name = {
-        "B": "Burnley",
-        "S": "Swansea",
-        "P": "Crystal Palace",
-        "WBA": "West Bromwich Albion",
-        "E": "Everton",
-        "T": "Tottenham",
-        "W": "West Ham",
-        "H": "Hull City",
-        "L": "Leicester",
-        "M": "Manchester City",
-        "A": "Arsenal",
-        "C": "Chelsea"
-    };
+    //to be removed:
+    //Not used anymore
+    // var pl_short_name = {
+    //     "B": "Burnley",
+    //     "S": "Swansea",
+    //     "P": "Crystal Palace",
+    //     "WBA": "West Bromwich Albion",
+    //     "E": "Everton",
+    //     "T": "Tottenham",
+    //     "W": "West Ham",
+    //     "H": "Hull City",
+    //     "L": "Leicester",
+    //     "M": "Manchester City",
+    //     "A": "Arsenal",
+    //     "C": "Chelsea"
+    // };
     
     
     //EXPORTS
