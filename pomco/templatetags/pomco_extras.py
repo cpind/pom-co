@@ -1,3 +1,4 @@
+import json
 from django import template
 from django.core.urlresolvers import reverse
 from pomco.views import _league
@@ -57,5 +58,10 @@ def clubsoptions(stats):
     if l == pomco.PL:
         for club in clubs:
             club['name']=club['value']
-    print(clubs)
     return context
+
+@register.simple_tag
+def datateams(teams):
+    dtos = [{key: t.__dict__[key] for key in ["members", "team_name", "league", "id"]} for t in teams]
+#    return dtos
+    return json.dumps(dtos)

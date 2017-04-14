@@ -99,7 +99,22 @@ def _defaultstats(request):
     else:
         return 'l1mpg'
     
+def updateteam(request, team_id):
+    if not request.user.is_authenticated():
+        return HttpResponse('Unauthorized', status=401)
+    if request.method != 'POST':
+        raise Http404()
+    team = getcustomteamor404(team_id)
+    return update_team(request, team)
 
+
+def getcustomteamor404(team_id):
+    if not team_id.startswith('$'):
+        raise Http404()
+    team_id = team_id[1:]
+    return get_object_or_404(Team, pk=team_id)
+
+    
 def team(request, team_id, stats=None):
     if stats is None:
         stats = _defaultstats(request)
@@ -111,8 +126,7 @@ def team(request, team_id, stats=None):
     if team_id.startswith('$'):
         if not request.user.is_authenticated():
             return HttpResponseRedirect(reverse('team', kwargs={'stats':stats, 'team_id':'all'}))
-        team_id = team_id[1:]
-        team = get_object_or_404(Team, pk=team_id)
+        team = getcustomteamor404(team_id)
     else:
         team = _get_team(team_id)
         if team is None:

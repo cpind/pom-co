@@ -1,0 +1,47 @@
+from pomco import PL, L1
+
+CLUBS = {
+    L1:{
+        "SCO":"Angers",
+        "SCB":"Bastia",
+        "FCGB":"Bordeaux",
+        "SMC":"Caen",
+        "DFCO":"Dijon",
+        "EAG":"Guingamp",
+        "LOSC":"Lille",
+        "FCL":"Lorient",
+        "OL":"Lyon",
+        "OM":"Marseille",
+        "FCM":"Metz",
+        "ASM":"Monaco",
+        "MHSC":"Montpellier",
+        "ASNL":"Nancy",
+        "FCN":"Nantes",
+        "OGCN":"Nice",
+        "PSG":"Paris",
+        "SRFC":"Rennes",
+        "ASSE":"Saint",
+        "TFC":"Toulouse",
+    },
+    PL:{
+        'Arsenal': 'Arsenal FC',
+        'Bournemouth': 'AFC Bournemouth',
+        'Burnley': 'Burnley FC',
+        'Chelsea': 'Chelsea FC',
+        'Everton': 'Everton FC',
+        'Hull': 'Hull City',
+        'Leicester': 'Leicester City',
+        'Liverpool': 'Liverpool FC',
+        'Man': 'Manchester City',
+        'Middlesbrough': 'Middlesbrough FC',
+        'Palace': 'Crystal Palace',
+        'Southampton': 'Southampton FC',
+        'Stoke': 'Stoke City',
+        'Sunderland': 'Sunderland AFC',
+        'Swansea': 'Swansea City AFC',
+        'Tottenham': 'Tottenham Hotspurs',
+        'WBA': 'West Bromwich Albion',
+        'Watford': 'Watford FC',
+        'West Ham': 'West Ham United'
+    }
+}

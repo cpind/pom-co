@@ -150,8 +150,6 @@ def _read_file(filename):
     return content
 
 
-
-
 def _updatestore(entry, day):
     "update the store with entry and day"
     filename = _stat_filename(entry, day)
@@ -161,7 +159,6 @@ def _updatestore(entry, day):
     except FileNotFoundError:
         #print(" no file for {} - day:{} - {} ".format(entry, day, filename))
         pass
-    
     
 
 def _initstore(entry):

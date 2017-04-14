@@ -1,13 +1,31 @@
 {% extends 'pomco/base_pomco.html'%}
+{% load pomco_extras %}
 
 {% block content %}
 
 {% if team_list %}
-
-<div class="main-team-list">
-  {% include 'pomco/large_team_tile_list.html' %}
+<div class="row">
+  <div class="col-md-8 col-md-offset-2">
+    <div class="js-team-view js-team-aggregate" data-teams='{% datateams team_list %}'>
+      <div class="row">
+        <div class="col-12">
+          <div class="checkbox">
+            <label>
+              <input class="js-groupsby-poste" type="checkbox"> Groups by poste
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% if false %}
+    <div class="main-team-list" >
+      <h1>Custom Teams</h1>
+      {% include 'pomco/large_team_tile_list.html' %}
+      <h1>Standard Teams</h1>
+    </div>
+    {% endif %}
+  </div>
 </div>
-
 {% else %}
 
 <p>No teams are available.</p>
