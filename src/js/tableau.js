@@ -62,6 +62,7 @@
         ctx.scalex =  d3.scaleLinear()
 	    .domain([0, ctx.colCount])
 	    .range([ctx.rowHeaderWidth, ctx.width]);
+        ctx.showNoData = true;
     }
 
     function tableau_height(ctx) {
@@ -69,35 +70,74 @@
     }
 
 
-    function _trim(el, opt) {
-        var ctx = context(el),
-            svg = ctx.svg,
-            j, i, player, keep,
+    function tableau_flag_nodata(ctx) {
+        var i, player, j, keep, 
             players = ctx.data.playersAll;
         for( i = 0; i < players.length; ++i ) {
             player = players[i];
             keep = false;
             for( j = 0; j < player.notes.length; ++j ) {
-                if( player.notes.note[j] ) {
+                if( player.notes[j].note ) {
                     keep = true;
                     break;
                 }
             }
-            ctx.playersInfo[player.uid].order = -1;
+            ctx.playersInfo[player.uid].nodata = !keep;
+        }
+        
+    }
+
+    //TODO: rename to show that we set filter and update
+    function _trim(el, enable) {
+        var ctx = context(el),
+            svg = ctx.svg,
+            i, player, info,
+            players = ctx.data.playersAll;
+        ctx.showNoData = !enable;
+        for( i = 0; i < players.length; ++i ) {
+            player = players[i];
+            info = ctx.playersInfo[player.uid];
+            if( ctx.showNoData ) {
+                info.order = i;
+                info.hidden = false;
+            } else {
+                if( info.nodata ) {
+                    info.order = -1;
+                    info.hidden = true;
+                }
+            }
         }
         //fix ordering
-        players = players.slice().sort(function(p1, p2){
-            return tableau_player_order(p1) - tableau_player_order(p1);
+        players = players.slice();
+        players = players.filter(function(p){
+                info = ctx.playersInfo[p.uid];
+                return !info.hidden;
+            });
+        players.sort(function(p1, p2){
+            return tableau_player_order(ctx, p1.uid)
+                - tableau_player_order(ctx, p2.uid);
         });
         for( i = 0; i < players.length; ++i ) {
             player = players[i];
             ctx.playersInfo[player.uid].order = i;
         }
-        //redraw
+        //update bars position
         svg
-            .selectAll('.note');
+            .selectAll('.note')
+            .call(tableau_selection_notes_transform(ctx))
+        ;
+        //update colheaders position 
+        svg.selectAll('.colTitle')
+            .attr('opacity', function(p){
+                if(ctx.playersInfo[p.player].hidden) {
+                    return 0;
+                }
+                return 1;
+            })
+            .call(tableau_selection_title_transform(ctx));
     }
 
+    
     function tableau_player_order(ctx, uid) {
         return ctx.playersInfo[uid].order;
     }
@@ -113,9 +153,11 @@
         for( i =0 ; i < ctx.data.playersAll.length; ++i) {
             player = ctx.data.playersAll[i];
             ctx.playersInfo[player.uid] = {
-                order:i
+                order:i,
+                hidden:false
             };
         }
+        tableau_flag_nodata(ctx);
         ctx.rowCount = ctx.data.playersAll[0].notes.length;
         svg = d3
             .select(el)
@@ -144,9 +186,10 @@
                 .range([ctx.colHeaderHeight,
                         tableau_height(ctx)]);
         var scaley = ctx.scaley;
-        var scalenotes = d3.scaleLinear()
+        ctx.scalenotes = d3.scaleLinear()
 	    .domain([0, 9])
 	    .range([ctx.rowHeight, 2]);
+        var scalenotes = ctx.scalenotes;
         svg
             .append('g')
             .selectAll('.note')
@@ -154,24 +197,37 @@
             .enter()
             .append('rect')
             .attr('class', 'note')
-            .attr('transform', function(d){
-                var tx = tableau_player_tx(ctx, d._tableau_.player),
-                    ty = scaley(d._tableau_.day) + ctx.rowHeight - scalenotes(d.note);
-                return 'translate(' + tx + ','
-                    +  ty + ')';
-            })
-            .attr('width', ctx.colWidth - 1)
-            .attr('height', function(d) {
-                if( !d.note ) return 0;
-                return scalenotes(d.note);
-            });
+            .call(tableau_selection_notes(ctx))
+            ;
         tableau_rowHeaders(ctx);
         tableau_colHeaders(ctx);
     }
 
+    function tableau_selection_notes_transform(ctx) {
+        return function(selection) {
+            var tx, ty;
+            selection
+                .attr('transform', function(d){
+                    tx = tableau_player_tx(ctx, d._tableau_.player);
+                    ty = ctx.scaley(d._tableau_.day)
+                        + ctx.rowHeight - ctx.scalenotes(d.note);
+                    return 'translate(' + tx + ','
+                        +  ty + ')';
+                });
+        };
+    }
+    
     function tableau_selection_notes(ctx) {
-        
-        return function(selection){
+        var scalex = ctx.scalex,
+            scalenotes = ctx.scalenotes;
+        return function (selection){
+            selection
+                .call(tableau_selection_notes_transform(ctx))
+                .attr('width', ctx.colWidth - 1)
+                .attr('height', function(d) {
+                    if( !d.note ) return 0;
+                    return scalenotes(d.note);
+                });
             
         };
     }
@@ -180,18 +236,24 @@
         return ctx.scalex(ctx.playersInfo[uid].order);
     }
 
+    
     function tableau_colHeaders(ctx) {
         var svg = ctx.svg,
             columns = [], i,
             players = ctx.data.playersAll,
-            player;
+            col,
+            player, info;
         for(i = 0; i < players.length; ++i) {
             player = players[i];
-            columns.push({
+            info = ctx.playersInfo[player.uid];
+            col = {
                 title: player.nom,
                 player: player.uid,
-                order: ctx.playersInfo[player.uid].order
-            });
+                order: info.order
+            };
+            col.title = ((info.nodata) ? "::" : "") + col.title;
+            columns.push(col);
+
         }
         svg.selectAll('.colTitle')
             .data(columns)
@@ -199,11 +261,20 @@
             .append('text')
             .attr('class', 'colTitle')
             .text(function(d, i){ return d.title;})
-            .attr('transform', function(d){
-                var tx = tableau_player_tx(ctx,d.player);
-                return 'translate(' + tx + ',' + ctx.colHeaderHeight + ') rotate(-45)';
-            })
-        ;
+            .call(tableau_selection_title_transform(ctx));
+    }
+
+    function tableau_selection_title_transform(ctx) {
+        return function(selection){
+            var tx;
+            selection
+                .attr('transform', function(d){
+                    tx = tableau_player_tx(ctx,d.player);
+                    tx += 5;
+                    return 'translate(' + tx + ','
+                        + ctx.colHeaderHeight + ') rotate(-45)';
+                });
+        };
     }
 
     function tableau_rowHeaders(ctx) {
