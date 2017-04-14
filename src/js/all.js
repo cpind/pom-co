@@ -51,7 +51,6 @@ $(function(){
 
 
     $(window).on('click', function(event){
-        //        return;
         var $target = $(event.target);
         if( $target.hasClass('js-teams-menu') ||
             $target.parents('.teams-drawer').length ||
@@ -133,8 +132,7 @@ $(function(){
         if( !name || name === "") return;
         var modal = $(this);
         modal.find('#inputTeamName').val(name);
-        
-    })
+    });
     
     adjustDrawerHeight();
     refreshAggregates();
@@ -206,7 +204,7 @@ $(function(){
                     + '"/>'
                     + '<span class="name">' + player.nom + '</span>'
                     + '<span class="team">' + player.team + '</span>'
-                    + '</li>')
+                    + '</li>');
         }
         $playserSelect.addClass('show');
     });
@@ -245,13 +243,13 @@ $(function(){
                 updateTableau({members:members});
             }
         }
-    })
+    });
 
 
     $('.js-add-player2').on('click', function(event){
         setMode(ADD);
-        teamMembers = tableau.members();
-        tableau.complement($tableau, true);
+        teamMembers = tableau.members($tableau[0]);
+        tableau.complement($tableau[0], true);
         d3.select($tableau[0]).select('svg').classed('active', true);
         d3.select($tableau[0])
             .selectAll('svg g.season')
@@ -283,23 +281,29 @@ $(function(){
             selection = d3.selectAll('svg .season');
         disableFilters();
         setMode(MOVES);
-        selection
-            .on('click',function(d, index, nodes){
-                if( !d.id ) {
-                    return;
-                }
-                if( !active ) {
-                    active = d.id;
-                    d3.select(this).classed('selected', true);
-                    return;
-                }
-                if( active == d.id ) {
-                    active = null;
-                    d3.select(this).classed('selected', false);
-                    return;
-                }
-                tableau.moves($tableau[0], active, d.id);
-            });
+        selection.on('click',function(d, index, nodes){
+            if( !d.id ) {
+                return;
+            }
+            if( !active ) {
+                active = d.id;
+                d3.select(this).classed('selected', true);
+                return;
+            }
+            if( active == d.id ) {
+                active = null;
+                d3.select(this).classed('selected', false);
+                return;
+            }
+            tableau.moves($tableau[0], active, d.id);
+        });
+    });
+
+    $('.js-groupsby-poste').on('change', function(e){
+        var target = e.target,
+            checked = $(e.target).is(':checked');
+        tableau.groupByPoste($tableau[0], checked);
+        
     });
 
     
@@ -313,7 +317,7 @@ $(function(){
         if( mode == VIEW) {
             enableFilters();
         }
-    }
+    };
     
     //event
     $('.js-select-club').on('change', function(e){
@@ -336,8 +340,8 @@ $(function(){
         if(!val || val == ""){
             $el.val("");
         }
-        updateTableau()
-    })
+        updateTableau();
+    });
 
     function clearFilters(){
         filterPoste(null);
@@ -353,9 +357,9 @@ $(function(){
 
     function enableFilters(enabled){
         var disabled = (enabled == null) ? false: !enabled;
-        $('.js-select-poste button').prop('disabled', disabled)
-        $('.js-select-club button').prop('disabled', disabled)
-        $('.js-search-name').prop('disabled', disabled)
+        $('.js-select-poste button').prop('disabled', disabled);
+        $('.js-select-club button').prop('disabled', disabled);
+        $('.js-search-name').prop('disabled', disabled);
     }
 
     function tableauOptions(){
@@ -377,12 +381,11 @@ $(function(){
                 filterPoste: filterPoste(),
                 filterClub: filterClub(),
                 filterName: filterName(),
-                
+                data: window.statsmpg
             });
         });
     }
 
-    //TODO: replicate to other filters
     function filterPoste(val){
         var args = ['val'].concat(Array.prototype.slice.call(arguments));
         return $.fn.selectpicker.apply($('.js-select-poste'), args);
@@ -402,13 +405,27 @@ $(function(){
     //tableau
     function refreshAggregates(){
         $('.js-team-aggregate').each(function(index, el){
-            var members = JSON.parse(el.dataset.members),
-                detail = getDetail(el);
-            members = members.filter(function(m){return m;});
-            teamMembers = members;
+            var members = null,
+                detail = getDetail(el),
+                teams = null,
+                data = $(el).data();
+            if( data.members ){
+                members = data.members;
+                members = members.filter(function(m){return m;});
+            }
+            if( data.teams ) {
+                teams = data.teams;
+                for( var i = 0; i < teams.length; ++i ) {
+                    teams[i].members = JSON.parse(teams[i].members);
+                }
+            }
+            if( !detail ) {
+                members = [members];
+            }
+            teamMembers = members || teams;
             $.when(dataReadyDef).done(function(){
                 tableauInit(el, {
-                    members:members,
+                    members:members || teams,
                     detail: detail,
                     height: 50,
                     width:$(el).width()
@@ -428,8 +445,9 @@ $(function(){
         return tableau.init(el, {
             height: 50,
             width: $(el).width(),
-            members: teamMembers,
+            members: opt.members,
             detail: getDetail(el),
+            data: window.statsmpg
         });
     }
 

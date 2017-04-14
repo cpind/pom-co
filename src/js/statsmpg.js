@@ -8,6 +8,10 @@
         current_team = ""
     ;
 
+    //CONSTANTS
+    var _entered_token = "<",
+        _injured_token = "b"
+    ;
 
     function init(datacsv) {
         var data = {},
@@ -28,7 +32,7 @@
         }
         for(i = 0; i < players.length; ++i ) {
             p = players[i];
-            uid = playerUID(p);
+            uid = p.uid;
             playersIndex[uid] = p;
         }
     };
@@ -52,6 +56,7 @@
                 player[columns[c]] = split[c];
             }
             player.notes = parseNotes(split);
+            player.uid = playerUID(player);
             // if( player.team in pl_short_name ) {
             //     player.team = pl_short_name[player.team];
             // }
@@ -139,11 +144,9 @@
             if( isNaN(note) ){
                 note = null;
             }
-            if( noteTokens[0] == "<"){
-                note = "<";
-            }
             notes.push({
-                entered: noteTokens[0] == "<",
+                entered: noteTokens[0] == _entered_token,
+                injured: noteTokens[0] == _injured_token,
                 note:note
                 //TODO add goals / owngoals property
             });

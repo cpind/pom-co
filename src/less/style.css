@@ -6924,6 +6924,12 @@ ul {
 .alert {
   margin-top: -20px;
 }
+.js-team-aggregate {
+  overflow-y: auto;
+}
+svg .colTitle {
+  font-size: 11px;
+}
 svg .y.axis line {
   stroke: white;
   stroke-opacity: 0.2;
@@ -6935,7 +6941,7 @@ svg .y.axis .zero line {
   stroke: #ccc;
   stroke-opacity: 1;
 }
-svg rect.day {
+svg .note {
   fill: #337ab7;
 }
 svg .club {
