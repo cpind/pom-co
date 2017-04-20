@@ -26,6 +26,8 @@ $(function(){
     //current state
     var state = VIEW;
 
+    //export
+    window.$tableau = $tableau;
 
     //initial state
     $('.js-done').hide();
@@ -139,6 +141,8 @@ $(function(){
     $(window).resize(adjustDrawerHeight);
     
 
+    $('.chosen-select').chosen();
+    
     function adjustDrawerHeight(){
         var topbarHeight =
             50 // topbar height
@@ -306,6 +310,17 @@ $(function(){
         
     });
 
+    $('.js-aggregate-days').on('change', function(e){
+        var target = e.target,
+            checked = $(e.target).is(':checked');
+        tableau.aggregate($tableau[0], 'days', checked);
+    });
+
+    $('.js-sort-totals').on('click', function(e) {
+        var target = e.target,
+            checked = $(e.target).is(':checked');
+        tableau.aggregate($tableau[0], 'days', checked);
+    });
     
     var setMode = function (mode) {
         state = mode;

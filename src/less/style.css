@@ -6927,6 +6927,13 @@ ul {
 .js-team-aggregate {
   overflow-y: auto;
 }
+svg .group .background {
+  fill: #eeeeee;
+  stroke: blue;
+}
+svg .groupTitle {
+  font-size: 11px;
+}
 svg .colTitle {
   font-size: 11px;
 }
