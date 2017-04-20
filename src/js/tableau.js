@@ -494,6 +494,8 @@
         ctx.rowCount = ctx.data.playersAll[0].notes.length;
         svg = d3
             .select(el)
+            .append('div')
+            .attr('class', 'tableau-container')
             .append('svg')
             .attr('width', ctx.rowHeaderWidth + ctx.colCount * ctx.colWidth + 30)
             .attr('height', tableau_height(ctx));
@@ -502,9 +504,7 @@
         ctx.scalenotes = d3.scaleLinear()
 	    .domain([0, 9])
 	    .range([0, ctx.rowHeight - 2]);
-//        tableau_notes(ctx, svg);
         tableau_rowHeaders(ctx);
-//        tableau_colHeaders(ctx);
         svg.append('g')
             .attr('class', 'players');
         _refreshGroups(ctx);
@@ -534,29 +534,11 @@
         return data;
     }
 
-    function tableau_notes(ctx, selection) {
-        var data = _notes_data(ctx);
-        selection
-            .append('g')
-            .attr('class', 'notes')
-            .selectAll('.note')
-            .data(data)
-            .enter()
-            .append('rect')
-            .attr('class', 'note')
-            .call(tableau_selection_notes_transform(ctx))
-            .attr('width', ctx.colWidth - 1)
-            .attr('height', function(d) {
-                if( !d.note ) return 0;
-                return ctx.scalenotes(d.note);
-            });        
-    }
 
     function is_days_y_axis(ctx) {
         //todo
         return true;
     }
-
     
     
     function tableau_player_ty(ctx, datum) {
@@ -645,35 +627,6 @@
     }
 
     
-    function tableau_colHeaders(ctx) {
-        var svg = ctx.svg,
-            columns = [], i,
-            players = ctx.data.playersAll,
-            col,
-            player, info;
-        for(i = 0; i < players.length; ++i) {
-            player = players[i];
-            info = playerByUID(ctx, player.uid);
-            col = {
-                title: player.nom,
-                player: player.uid,
-                order: info.order,
-                hidden: false
-            };
-            col.title = (!playerHasData(ctx, player.uid) ? "::" : "") + col.title;
-            columns.push(col);
-        }
-        svg.append('g')
-            .attr('class', 'colHeaders')
-            .selectAll('.colTitle')
-            .data(columns)
-            .enter()
-            .append('text')
-            .attr('class', 'colTitle')
-            .text(function(d, i){ return d.title;})
-            .call(tableau_selection_title_transform(ctx));
-    }
-
     function tableau_selection_title_transform(ctx) {
         return function(selection, x){
             var tx;
@@ -686,6 +639,7 @@
                 });
         };
     }
+
 
     function tableau_rowHeaders(ctx) {
         var svg = ctx.svg,
