@@ -5,13 +5,12 @@
     var players = [],
         playersIndex = {},
         teams = [],
-        current_team = ""
-    ;
+        current_team = "";
 
     //CONSTANTS
     var _entered_token = "<",
-        _injured_token = "b"
-    ;
+        _injured_token = "b";
+
 
     function init(datacsv) {
         var data = {},
@@ -23,7 +22,7 @@
             playerscsv = datacsv.playerscsv;
             teamscsv = datacsv.teamscsv;
             data = {
-                players: parsePlayers(playerscsv)
+                players: parsePlayers(playerscsv)//,
 //                teams: parseTeams(teamscsv)
             };
         }
@@ -35,6 +34,7 @@
             uid = p.uid;
             playersIndex[uid] = p;
         }
+        teams = data.teams;
     };
 
 
@@ -42,6 +42,10 @@
         return player.nom + '(' + player.team + ')';                              
     }
 
+    function parseTeams(data) {
+        //TODO
+    }
+    
     function parsePlayers(data) {
         var players = [],
             lines = data.split('\n'),

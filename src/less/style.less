@@ -5,7 +5,7 @@
 @import "teams-drawer.less";
 @import "fancy-scrollbar.less";
 
-
+@font-size:8px;
 
 .players-select{
     visibility:hidden;
@@ -32,17 +32,54 @@ ul{
     padding-left:0px;
 }
 
+.js-team-aggregate{
+    .form-inline{
+        margin-left:30px;
+        .dropdown{
+            display:inline-block;
+        }
+    }
+}
+
 .alert{
     margin-top:-@navbar-margin-bottom;
 }
 
-.js-team-aggregate{
-    overflow-y:auto;
-}
-
 .tableau-container{
-    width: 100%;
-    overflow-y: auto;
+    display:flex;
+    flex-direction: column;
+    height: 500px;
+    .header{
+        order:1;
+        flex-direction: row;
+        flex:0 0 auto;
+        overflow-y:hidden;
+        overflow-x:visible;
+        &::-webkit-scrollbar { 
+            display: none;
+        }
+    }
+    .body{
+        display:flex;
+        flex-direction: row;
+        order:2;
+        overflow-y:scroll;
+        flex: 1 1 auto;
+        .main{
+            flex:1 1 auto;
+            overflow-x:scroll;
+            overflow-y: auto;
+            order:2;
+            height:100%;
+        }
+        .east{
+            /* position:absolute; */
+            flex:0 0 auto;
+            order:1;
+            overflow-y:hidden;
+            height:100%;
+        }
+    }
 }
 
 svg{
@@ -56,7 +93,7 @@ svg{
         font-size:11px;
     }
     .colTitle{
-        font-size:11px;
+        font-size:@font-size;
     }
     .y.axis {
         & line{

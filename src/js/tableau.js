@@ -37,7 +37,7 @@
     function update_context(el, opt){
         opt = opt || {};
         var ctx = context(el);
-        ctx.rowHeight = 50;
+        ctx.rowHeight = 30;
         ctx.colWidth = 10;
         ctx.players = [];
         ctx.trimData = true;
@@ -46,19 +46,20 @@
         ctx.colCount = ctx.data.playersAll.length;
         ctx.width = ctx.colCount * ctx.colWidth;
         ctx.rowHeaderWidth = 30;
-        ctx.colHeaderHeight = 50;
+        ctx.colHeaderHeight = 60;
         ctx.scalex =  d3.scaleLinear()
 	    .domain([0, ctx.colCount])
-	    .range([ctx.rowHeaderWidth, ctx.width]);
+	    .range([0, ctx.width]);
         ctx.scaley = d3.scaleLinear()
             .domain([0, ctx.rowCount])
-            .range([ctx.colHeaderHeight,
+            .range([0,
                     tableau_height(ctx)]);
         ctx.aggregate = {players:false, days:false};
+        ctx.teams = [];
     }
 
     function tableau_height(ctx) {
-        return ctx.rowCount * ctx.rowHeight + ctx.colHeaderHeight;
+        return ctx.rowCount * ctx.rowHeight;
     }
 
     //ie aggregate(el, 'player', true)
@@ -75,13 +76,43 @@
         if( entity == 'days') {
             ctx.aggregate.days = val;
         }
+        //adjust viewport
+        var newheight = ctx.scalenotes(_maxSumNotes(ctx));
+        if( !ctx.aggregate.days ) {
+            newheight = tableau_height(ctx);
+        }
+        newheight += 10;
+        ctx.svg.select('.players')
+            .attr('transform','translate(0, -' + (tableau_height(ctx) -  newheight )+ ')');
+        ctx.svg.attr('height', newheight);
+        ctx.svgRowHeader.attr('height', newheight);
         _refresh(ctx);
     }
 
 
+    function _maxSumNotes(ctx) {
+        var max, i, n;//adjust the viewport
+        if( '_maxnotes' in ctx ) {
+            return ctx._maxnotes;
+        }
+        max = -1;
+        for( i = 0; i < ctx.players.length; ++i ) {
+            n = itemSumNotes(ctx, ctx.players[i]);
+            max = ( n > max ) ? n : max;
+        }
+        ctx._maxnotes = max;
+        return max;
+    }
+
     function _groupby(players, prop) {
         var i, player, g, groupindex = {},
-            groupkey, groups = [];
+            groupkey, groups = [], propname;
+        if( typeof(prop) == 'string') {
+            propname = prop;
+            prop = function(player){
+                return player[propname];
+            };
+        }
         for( i = 0; i < players.length; ++i ) {
             player = players[i];
             groupkey = prop(player.player);
@@ -146,10 +177,10 @@
             players = ctx.players,
             groups, svg = ctx.svg;
         if( opt == 'team') {
-            ctx.groups = _groupby(players, function(player){ return player.team;});
+            ctx.groups = _groupby(players, 'team');//function(player){ return player.team;});
         }
         else if( opt == 'poste') {
-            ctx.groups = _groupby(players, function(player){ return player.poste;});
+            ctx.groups = _groupby(players, 'poste');//function(player){ return player.poste;});
         }
         else {
             ctx.groups = _groupby(players, function(player){return 'all';});
@@ -158,9 +189,14 @@
         _refresh(ctx);
     }
 
-    function _refreshGroups(ctx) {
-        var svg = ctx.svg, groups,
-            players = ctx.players;
+    function _refreshGroups(ctx, opt) {
+        opt = $.extend({
+            svg: ctx.svg,
+            content: true,
+            colHeaders: false
+        }, opt);
+        var svg = opt.svg,
+            groups, players = ctx.players;
         if( !ctx.groups )  {
             ctx.groups = _groupby(players, function(){return 'all';});
         }
@@ -174,6 +210,9 @@
             .append('g')
             .attr('class', 'group')
             .call(function(group){
+                if( !opt.colHeaders ) {
+                    return;
+                }
                 group.append('rect')
                     .attr('class', 'background')
                     .attr('y', ctx.colHeaderHeight + 5)
@@ -185,6 +224,9 @@
             })
             .merge(groups)
             .call(function(group){
+                if( !opt.colHeaders ) {
+                    return;
+                }
                 group.select('.background')
                     .attr('width', function(d){
                         return d.elements.length * ctx.colWidth;
@@ -196,7 +238,7 @@
                         return d.title;});
             })
             .attr('transform', function(d){
-                var x = d.x * ctx.colWidth + ctx.rowHeaderWidth;
+                var x = d.x * ctx.colWidth;
                 return 'translate(' + x + ', 0)';
             })
             .each(function(group) {
@@ -208,13 +250,29 @@
                     .enter()
                     .append('g')
                     .attr('class', 'player')
-                    .call(function(player){
-                        player.append('text')
-                            .attr('class', 'colTitle')
-                            .call(tableau_selection_title_transform(ctx), 0);
+                    .call(function(enter){
+                        if( !opt.colHeaders ) {
+                            return;
+                        }
+                        var sym = d3.symbol()
+                                .type(d3.symbolSquare)
+                                .size(50);
+                        enter
+                            .call(columnTitle, ctx)
+                            .append('path')
+                            .attr('class', 'team-symbol')
+                            .attr('d', sym)
+                            .attr('transform', 'translate(' +(ctx.colWidth * 0.5) + ', ' + (ctx.colHeaderHeight + 10 )+ ' )')
+                            .style('fill', function(d){
+                                return ctx.teamScale(d.player.player.team);
+                            });
+                        
                     })
                     .merge(players)
                     .call(function(player){
+                        if( !opt.colHeaders ) {
+                            return;
+                        }
                         player
                             .select('.colTitle')
                             .text(function(d, i){
@@ -227,6 +285,11 @@
                         return 'translate(' + x + ', ' + y + ')';
                     })
                     .each(function(d){
+                        if( !opt.content ) {
+                            return;
+                        }
+                        var color = d3.scaleSequential(d3.interpolateBlues)
+                                .domain([0,9]);
                         var notes = d3.select(this)
                                 .selectAll('.note')
                                 .data(_notes_data(ctx, {
@@ -241,6 +304,7 @@
                                 if( !d.note ) return 0;
                                 return ctx.scalenotes(d.note);
                             })
+                            .style('fill', function (d){return color(d.note);})
                             .merge(notes)//update
                             .attr('transform', function(d){
                                 var y =  tableau_player_ty(ctx,d);
@@ -358,6 +422,11 @@
             svg.select('.colHeaders')
                 .attr('display', 'none');
             //refresh groups
+            _refreshGroups(ctx, {
+                svg: ctx.svgHeader,
+                content: false,
+                colHeaders: true
+            });
             _refreshGroups(ctx);
             return;
         }
@@ -412,14 +481,14 @@
     }
 
 
-    function _groupSumNotes(ctx, group) {
-        var i, items = group.elements,
-            tot = 0;;
-        for( i = 0; i < items.length; ++i) {
-            tot += itemSumNotes(ctx, items[i]);
-        }
-        return tot;
-    }
+    // function _groupSumNotes(ctx, group) {
+    //     var i, items = group.elements,
+    //         tot = 0;;
+    //     for( i = 0; i < items.length; ++i) {
+    //         tot += itemSumNotes(ctx, items[i]);
+    //     }
+    //     return tot;
+    // }
 
     function itemSumNotes(ctx, item) {
         var player, notes = [];
@@ -473,10 +542,29 @@
         return playerByUID(ctx, uid).order;
     }
 
+    function _initTeams(ctx) {
+        var i, player, teams = {}
+        ;
+        for( i =0 ; i < ctx.players.length; ++i) {
+            player = ctx.players[i];
+            teams[player.team] = 1;
+        }
+        //extract teams
+        //todo should read from team.csv for having long name as well
+        for( i in teams ) {
+            ctx.teams.push(i);
+        }
+        ctx.teamScale = d3
+            .scaleOrdinal(d3.schemeCategory20)
+            .domain(ctx.teams);
+        
+    }
+
+    
     function init(el, opt){
         var ctx = context(el),
             svg, i, j, player,
-            days = [], info;
+            days = [], info, container, teams = {};
         update_context(el, opt);
         svg = d3.select(el).select('svg');
         //init players info
@@ -490,21 +578,59 @@
                 player: player
             };
             ctx.players.push(info);
+            teams[player.team] = 1;
         }
+        _initTeams(ctx);
         ctx.rowCount = ctx.data.playersAll[0].notes.length;
-        svg = d3
+        container = d3
             .select(el)
             .append('div')
-            .attr('class', 'tableau-container')
+            .attr('class', 'tableau-container');
+        var header = container
+                .append('div')
+                .attr('class', 'header')
+                .style('margin-left', ctx.rowHeaderWidth + "px");
+        var body = container
+                .append('div')
+                .attr('class', 'body');
+        var main = body
+                .append('div')
+                .attr('class', 'main');
+        svg = main
             .append('svg')
-            .attr('width', ctx.rowHeaderWidth + ctx.colCount * ctx.colWidth + 30)
+            .attr('width', ctx.colCount * ctx.colWidth + 30)
             .attr('height', tableau_height(ctx));
+        _sync_scroll(main, header);
         //save svg ref to ctx for future reuse
         ctx.svg = svg;
         ctx.scalenotes = d3.scaleLinear()
 	    .domain([0, 9])
 	    .range([0, ctx.rowHeight - 2]);
-        tableau_rowHeaders(ctx);
+        body
+            .append('div')
+            .attr('class', 'east')
+            .append('svg')
+            .attr('width', ctx.rowHeaderWidth)
+            .attr('height', tableau_height(ctx));
+        ctx.svgRowHeader = d3.select(el).select('.tableau-container .east svg');
+        tableau_rowHeaders(ctx, ctx.svgRowHeader
+                           //d3.select(el).select('.tableau-container .east svg')
+                          );
+        header = header.append('svg')
+            .attr('width', svg.attr('width'))
+            .attr('height', ctx.colHeaderHeight)
+            .append('g')
+        //todo bind y translation to number of groups level?
+            .attr('transform', 'translate(0, -16)');
+        header
+            .append('g')
+            .attr('class', 'players');
+        ctx.svgHeader = header;
+        _refreshGroups(ctx, {
+            svg: header,
+            content: false,
+            colHeaders: true
+        });
         svg.append('g')
             .attr('class', 'players');
         _refreshGroups(ctx);
@@ -548,7 +674,7 @@
         //TODO, depends on the projection axis
         if( !(ctx.aggregate.days && is_days_y_axis(ctx)) ) {
             return ctx.scaley(d._tableau_.day)
-                        + ctx.rowHeight - ctx.scalenotes(d.note);
+                + ctx.rowHeight - ctx.scalenotes(d.note);
         }
         var player = playerByUID(ctx, uid);
         if( !player._stack_notes ) {
@@ -626,6 +752,13 @@
         return ctx._players_x_[uid] || 0;
     }
 
+
+    function columnTitle(selection, ctx) {
+        selection.append('text')
+            .attr('class', 'colTitle')
+            .call(tableau_selection_title_transform(ctx), 0);
+    }
+    
     
     function tableau_selection_title_transform(ctx) {
         return function(selection, x){
@@ -641,9 +774,14 @@
     }
 
 
-    function tableau_rowHeaders(ctx) {
-        var svg = ctx.svg,
-            rows = [], i;
+    function tableau_colHeaders(ctx, svg) {
+        _refreshGroups(ctx, svg, true);
+    }
+
+
+    function tableau_rowHeaders(ctx, svg) {
+        var rows = [], i;
+        svg = svg || ctx.svg;
         for(i = 0; i < ctx.data.playersAll[0].notes.length; ++i) {
             rows.push({
                 title: "J" + d3.format("02")(i+1),
@@ -651,6 +789,7 @@
                 order: i
             });
         }
+        
         svg.append('g')
             .attr('class', 'rowHeaders')
             .selectAll('.rowTitle')
@@ -666,6 +805,7 @@
             });        
     }
 
+
     function uid_to_id(member){
         if( !member ) {return "";}
         if( typeof(member) == 'number') {
@@ -677,5 +817,33 @@
         return id_tokens.join("__");
     }
 
+    
+    //fix shivering effect when syncing scroll between main an header
+    //timeout must be big enought(ie: 10 still shows problem in my machine)
+    function _sync_scroll(main, header) {
+        var whoscroll = null,
+            timeoutid = null;
+        _on_scroll(main, header);
+        _on_scroll(header, main);
+        function _on_scroll(self, other) {
+            self.on('scroll',function(){
+                if( !whoscroll) {
+                    whoscroll = self;
+                }
+                if( whoscroll != self ) {
+                    return;
+                }
+                if( timeoutid ) {
+                    window.clearTimeout(timeoutid);
+                }
+                timeoutid = window.setTimeout(function(){
+                    whoscroll = null;
+                    timeoutid = null;
+                }, 100);
+                var scrollLeft = d3.select(this).node(0).scrollLeft;
+                other.node(0).scrollLeft = scrollLeft;
+            });
+        }
+    }
     
 })()

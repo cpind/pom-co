@@ -37,6 +37,7 @@
     <!-- chosen -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.7.0/chosen.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.7.0/chosen.jquery.js"></script>
+  <script src="//d3js.org/d3-scale-chromatic.v0.3.min.js"></script>
   </head>
 
   <body>
@@ -44,5 +45,6 @@
     <div class="container">
       {% block content %}{% endblock %}
     </div>
+    {% block content-no-container %}{% endblock %}
   </body>
 </html>
