@@ -56,7 +56,31 @@
                     tableau_height(ctx)]);
         ctx.aggregate = {players:false, days:false};
         ctx.teams = [];
+        ctx.noteScale = tableau_scaleNote(ctx);
     }
+
+
+    function tableau_scaleDay(ctx) {
+        var scale = d3
+                .scaleSequential(d3.interpolateBlues)
+                .domain([ctx.rowCount, 0]);
+        return function(d) {
+            return scale(d._tableau_.day);
+        };
+    }
+    
+
+    function tableau_scaleNote(ctx) {
+        var notescale = d3
+        //            .scaleSequential(d3.interpolateBlues)
+        //                .scaleSequential(d3.interpolateRdYlGn)
+                        .scaleSequential(d3.interpolateReds)
+                .domain([0,9]);
+        return function(d){
+            return notescale(d.note);
+        };
+    }
+    
 
     function tableau_height(ctx) {
         return ctx.rowCount * ctx.rowHeight;
@@ -76,17 +100,40 @@
         if( entity == 'days') {
             ctx.aggregate.days = val;
         }
+        var t = d3.transition()
+                .duration(750)
+        ;
         //adjust viewport
         var newheight = ctx.scalenotes(_maxSumNotes(ctx));
+        ctx.noteScale = tableau_scaleDay(ctx);
         if( !ctx.aggregate.days ) {
             newheight = tableau_height(ctx);
+            ctx.noteScale = tableau_scaleNote(ctx);
         }
         newheight += 10;
         ctx.svg.select('.players')
-            .attr('transform','translate(0, -' + (tableau_height(ctx) -  newheight )+ ')');
-        ctx.svg.attr('height', newheight);
-        ctx.svgRowHeader.attr('height', newheight);
-        _refresh(ctx);
+            .transition(t)
+            .attr('transform','translate(0, '
+                  + (newheight - tableau_height(ctx) )
+                  + ')');
+        ctx.svg
+            .transition(t)
+            .attr('height', newheight);
+        ctx.svgRowHeader
+            .transition(t)
+            .attr('height', newheight);
+        //        _refresh(ctx);
+        ctx.svg.selectAll('.note')
+            .transition(t)
+            .delay(function(d){
+                var p = d._tableau_.playerData;
+                return p.globalX * (t.duration() / 100);
+            })
+            .style('fill', ctx.noteScale)
+            .attr('transform', function(d){
+                var y =  tableau_player_ty(ctx, d);
+                return 'translate(0, ' + y + ')';
+            });
     }
 
 
@@ -164,6 +211,7 @@
             });
             for( j = 0; j < elements.length; j ++) {
                 elements[j].x = j;
+                elements[j].globalX = j + g.x;
             }
         }
     }
@@ -262,7 +310,11 @@
                             .append('path')
                             .attr('class', 'team-symbol')
                             .attr('d', sym)
-                            .attr('transform', 'translate(' +(ctx.colWidth * 0.5) + ', ' + (ctx.colHeaderHeight + 10 )+ ' )')
+                            .attr('transform', 'translate('
+                                  + (ctx.colWidth * 0.5)
+                                  + ', '
+                                  + (ctx.colHeaderHeight + 10 )
+                                  + ' )')
                             .style('fill', function(d){
                                 return ctx.teamScale(d.player.player.team);
                             });
@@ -293,7 +345,8 @@
                         var notes = d3.select(this)
                                 .selectAll('.note')
                                 .data(_notes_data(ctx, {
-                                    player: d.player.uid
+                                    player: d.player.uid,
+                                    playerData: d
                                 }), function(d){return d._tableau_.day;});
                         notes
                             .enter()
@@ -304,10 +357,12 @@
                                 if( !d.note ) return 0;
                                 return ctx.scalenotes(d.note);
                             })
-                            .style('fill', function (d){return color(d.note);})
+                        // function (d){
+                        //         return ctx.noteScale(d.note);})
                             .merge(notes)//update
+                            .style('fill', ctx.noteScale)
                             .attr('transform', function(d){
-                                var y =  tableau_player_ty(ctx,d);
+                                var y =  tableau_player_ty(ctx, d);
                                 return 'translate(0, ' + y + ')';
                             });
                     });
@@ -490,29 +545,63 @@
     //     return tot;
     // }
 
-    function itemSumNotes(ctx, item) {
-        var player, notes = [];
-        if( typeof(item) == 'string') {
-            item = playerByUID(ctx, item);
-        }  else if( item.uid ) {
-            item = playerByUID(ctx, item.uid);
-        } 
-        if( !('_sumnotes' in item ) ) {
-            if( item.player && item.player.notes) {
-                item._sumnotes = _sumnotes(item.player.notes);
+    //operation is a funciton with a 'name' property defined which will be used
+    //for caching the result in the item 
+    function _itemOperation(operation) {
+        return function _operation(ctx, item) {
+            var res, player, notes = [], name = operation.name;
+            //map argument to item
+            if( typeof(item) == 'string') {
+                item = playerByUID(ctx, item);
+            }  else if( item.uid ) {
+                item = playerByUID(ctx, item.uid);
+            } else if( item.player && item.player.uid) {
+                item = playerByUID(ctx, item.player.uid);
             }
-            else if( item.player && item.player.uid) {
-                return itemSumNotes(ctx, item.player);
+            if( name && ( name in item) ) {
+                return item[name];
             }
-            else if( item.elements ) {
+            if( item.elements ) {
                 notes = item.elements.map(function(e){
-                    return itemSumNotes(ctx, e);
+                    return _operation(ctx, e);
                 });
-                item._sumnotes = _sumnotes(notes);
+            } else {
+                notes = item.player.notes;
             }
-        }
-        return item._sumnotes;
+            res = operation(notes);
+            if( name ) {
+                item[name] = res;
+            }
+            return res;
+        };
     }
+
+
+    var itemSumNotes = _itemOperation(_sumnotes);
+    
+    // function itemSumNotes(ctx, item) {
+    //     var player, notes = [];
+    //     if( typeof(item) == 'string') {
+    //         item = playerByUID(ctx, item);
+    //     }  else if( item.uid ) {
+    //         item = playerByUID(ctx, item.uid);
+    //     } 
+    //     if( !('_sumnotes' in item ) ) {
+    //         if( item.player && item.player.notes) {
+    //             item._sumnotes = _sumnotes(item.player.notes);
+    //         }
+    //         else if( item.player && item.player.uid) {
+    //             return itemSumNotes(ctx, item.player);
+    //         }
+    //         else if( item.elements ) {
+    //             notes = item.elements.map(function(e){
+    //                 return itemSumNotes(ctx, e);
+    //             });
+    //             item._sumnotes = _sumnotes(notes);
+    //         }
+    //     }
+    //     return item._sumnotes;
+    // }
     
     function _sumnotes(notes) {
         var j, note, sum = null;
@@ -637,7 +726,10 @@
     }
 
     function _notes_data(ctx, opt) {
-        opt = $.extend({player:null}, opt);
+        opt = $.extend({
+            player:null,
+            playerData:null
+        }, opt);
         var j, i, player, count,
             d, data = [],
             players = ctx.players;
@@ -652,7 +744,8 @@
                 d = player.notes[j];
                 d._tableau_ = {
                     player: player.uid,
-                    day: j
+                    day: j,
+                    playerData: opt.playerData
                 };
                 data.push( d );
             }
