@@ -126,8 +126,10 @@
         ctx.svg.selectAll('.note')
             .transition(t)
             .delay(function(d){
-                var p = d._tableau_.playerData;
-                return p.globalX * (t.duration() / 100);
+                var p = d._tableau_.playerData,
+                    day = d._tableau_.day,
+                    count = playerNotesStack(ctx, p.player)[day].count;
+                return (p.globalNotesCount + count) * (t.duration() / 750);
             })
             .style('fill', ctx.noteScale)
             .attr('transform', function(d){
@@ -188,8 +190,8 @@
 
     function updateGroupsPosition(ctx) {
         //compute groups position
-        var groups = ctx.groups,
-            j, i, g, elements;
+        var groups = ctx.groups,el,
+            j, i, g, elements, notescount = 0;
         if(!groups) {
             return;
         }
@@ -210,8 +212,11 @@
                 return e1.player.order - e2.player.order;
             });
             for( j = 0; j < elements.length; j ++) {
-                elements[j].x = j;
-                elements[j].globalX = j + g.x;
+                el = elements[j];
+                el.x = j;
+                el.globalX = j + g.x;
+                el.globalNotesCount = notescount;
+                notescount += itemNotesCount(ctx, el.player);
             }
         }
     }
@@ -576,8 +581,14 @@
         };
     }
 
-
-    var itemSumNotes = _itemOperation(_sumnotes);
+    var _itemSumNotes = _itemOperation(_sumnotes);
+    function itemSumNotes() {
+        return _itemSumNotes.apply(this, arguments);
+    }
+    var _itemNotesCount = _itemOperation(_notescount);
+    function itemNotesCount() {
+        return _itemNotesCount.apply(this, arguments);
+    }
     
     // function itemSumNotes(ctx, item) {
     //     var player, notes = [];
@@ -602,6 +613,21 @@
     //     }
     //     return item._sumnotes;
     // }
+
+    function _notescount(notes) {
+        var j, note, count = 0;
+        for( j = 0; j < notes.length; ++j ) {
+            note = notes[j];
+            if( note &&  typeof(note) == 'object') {
+                note = note.note;
+            }
+            if( !note ) {
+                continue;
+            }
+            count += 1;
+        }
+        return count;
+    }
     
     function _sumnotes(notes) {
         var j, note, sum = null;
@@ -770,12 +796,19 @@
                 + ctx.rowHeight - ctx.scalenotes(d.note);
         }
         var player = playerByUID(ctx, uid);
-        if( !player._stack_notes ) {
-            player._stack_notes = _build_notes_stack(ctx, uid);
-        }
-        return player._stack_notes[day];
+        // if( !player._stack_notes ) {
+        //     player._stack_notes = _build_notes_stack(ctx, uid);
+        // }
+        return playerNotesStack(ctx, player)[day].ty;
     }
 
+
+    function playerNotesStack(ctx, player) {
+        if( !player._stack_notes ) {
+            player._stack_notes = _build_notes_stack(ctx, player.uid);
+        }
+        return player._stack_notes;
+    }
     
 
     function _build_notes_stack(ctx, uid) {
@@ -783,24 +816,27 @@
             stack = [], i,
             notes = player.player.notes, note,
             scalenotes = ctx.scalenotes,
-            tot = 0;
+            tot = 0, ty, count = 0;
         for( i = 0; i < notes.length; ++i ) {
             note = notes[i].note;
             if( note ) {
                 tot += scalenotes(note);
             }
         }
-        stack.push(ctx.scaley(ctx.rowCount) - tot);
+        ty = ctx.scaley(ctx.rowCount) - tot;
         for( i = 0; i < notes.length; ++i) {
-            note = notes[i].note;
-            if( note ) {
-                stack.push(stack[stack.length - 1] + scalenotes(note));
-            } else {
-                stack.push(stack[stack.length - 1]);
+            if( i && (note = notes[i-1].note) ){
+                ty += scalenotes(note);
+                count += 1;
             }
+            stack.push({
+                ty:ty,
+                count: count
+            });
         }
         return stack;
     }
+
 
     function tableau_selection_notes_transform(ctx) {
         return function(selection) {
