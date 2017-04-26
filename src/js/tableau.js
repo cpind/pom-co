@@ -91,8 +91,7 @@
 
     function tableau_scaleDay(ctx) {
         var scale = d3
-                .scaleSequential(d3.interpolateBlues)
-        //        .scaleSequential(d3.interpolateRdYlGn)
+                .scaleSequential(d3.interpolateBlues)//d3.interpolateRdYlGn
                 .domain([ctx.rowCount, 0]);
         return function(d) {
             return scale(d._tableau_.day);
@@ -101,10 +100,9 @@
     
 
     function tableau_scaleNote(ctx) {
+                //tryed with d3.interpolateBlues and d3.interpolateRdYlGn
         var notescale = d3
-        //            .scaleSequential(d3.interpolateBlues)
-        //                .scaleSequential(d3.interpolateRdYlGn)
-                        .scaleSequential(d3.interpolateReds)
+                .scaleSequential(d3.interpolateReds)
                 .domain([0,9]);
         return function(d){
             return notescale(d.note);
@@ -131,8 +129,7 @@
             ctx.aggregate.days = val;
         }
         var t = d3.transition()
-                .duration(550)
-        ;
+                .duration(550);
         //adjust viewport
         var newheight = ctx.scalenotes(_maxSumNotes(ctx)) + 10;
         ctx.noteScale = tableau_scaleDay(ctx);
@@ -164,7 +161,6 @@
         ctx.svgRowHeader
             .transition(t)
             .attr('height', newheight);
-        //        _refresh(ctx);
         ctx.svg.selectAll('.note')
             .transition(t)
             .delay(function(d){
@@ -417,51 +413,24 @@
         }
         ctx.groupLevel = grouplevel;
         _refresh(ctx);
-        
     }
 
-    function _refreshGroups(ctx, opt) {
-        opt = $.extend({
-            svg: ctx.svg,
-            content: true,
-            colHeaders: false
-        }, opt);
-        var svg = opt.svg,
-            groups, players = ctx.players;
+    //create a new group generator for players
+    function tableau_groupPlayer(ctx) {
+        var players = ctx.players;
         if( !ctx.groups )  {
             ctx.groups = _groupby(players, function(){return 'all';});
         }
         updateGroupsPosition(ctx);
-        //update container width
-        svg.attr('width', ctx.gridWidth());
-        groups = svg
-            .select('.players')
-            .selectAll('.group')
-            .data(ctx.groups);
-        groups
-            .enter()
-            .append('g')
-            .attr('class', 'group')
-            .call(function(groups){
-                groups.append('path');
-                if( !opt.colHeaders ) return;
-                groups.append('rect')
-                    .attr('class', 'groupTitleBackground')
-                    .call(tableau_selection_title_transform(ctx), -1);
-                groups
-                    .append('g')
-                    .attr('class', 'groupTitleContainer')
-                    .call(tableau_selection_title_transform(ctx), -1)
-                    .call(function(selection){
-                        if( selection.select('.team-symbol').empty()) {
-                            selection.call(tableau_teamSymbol(ctx));
-                            selection.select('.team-symbol')
-                                .attr('transform', "translate(0, -4)");
-                        }
-                    })
-                    .append('text')
-                    .attr('class', 'groupTitle');
-            })
+        return function(selection) {
+            var groups;
+            groups = selection
+                .selectAll('.group')
+                .data(ctx.groups);
+            groups
+                .enter()
+                .append('g')
+                .attr('class', 'group')
             .merge(groups)
             .attr('transform', function(d) {
                 var x = d.x * ctx.colWidth;
@@ -473,179 +442,193 @@
                 return 'translate(' + x + ', 0)';
             })
             .attr('id', function(d){
-                return uid_to_id(d.id);})
-            .call(function(groups) {
-                groups.select('.groupTitleContainer')
-                    .select('.team-symbol')
-                    .style('fill', function(g){
-                        if( g.groupedby == 'team' )
-                            return ctx.teamScale(g.id);
-                        return '';})
-                    .attr("opacity", function(d) {
-                        return d.groupedby == 'team' ? 1 : 0;
-                    })
-                    .attr("opacity", function(d) {
-                        return d.groupedby == 'team' ? 1 : 0;
-                    });
-                groups.select('.groupTitle')
-                    .attr('transform', function(d){
-                        var x = 0;
-                        if( _group_displayName(d) && d.groupedby == 'team') {
-                            x = ctx.groupHeaderHeight;
-                        }
-                        return 'translate(' + x + ',0)';
-                    })
-                    .text(function(d){
-                        return _group_displayName(d);})
-                    .classed('level1', function(d){
-                        return d.level == 1;})
-                    .classed('level2', function(d){
-                        return d.level == 2;});
-                groups.select('.divider')
-                    .attr('d', function(d) {
-                        if( !(d.title || d.subTitle)) {
-                            return "";
-                        }
-                        var deltax = 14;
-                            data = [];
-                        if( opt.colHeaders ) {
-                            data = [
-                                [- deltax, tableau_height(ctx)],
-                                [ - deltax, ctx.colHeaderHeight],
-                                [ctx.xoffset() - deltax, 0]
-                            ];
-                        } else {
-                            data = [
-                                [- deltax, tableau_height(ctx)],
-                                [ - deltax, 0]
-                            ];
-                        }
-                        return d3.line()(data);
-                    })
-                    .attr('stroke', function(d){
-                        if( d.groupedby == 'team') {
-                        }
-                        if( d.level == 1 ) return 'gray';
-                        return 'lightgray';})
-                    .style('stroke-width', ctx.groupHeaderWidth * Math.sin(Math.abs(ctx.labelAngle) * Math.PI / 180))
-                    .attr('fill', 'none');
-            })
-            .each(function(group) {
-                players = d3.select(this)
+                return uid_to_id(d.id);});
+            groups.exit().remove();
+        };
+    }
+    
+
+    //create a new generator for players
+    function tableau_player(ctx) {
+        var players;
+        return function(selection){
+            selection
+                .call(tableau_groupPlayer(ctx))
+                .selectAll('.group')
+                .each(function(group){
+                    players = d3.select(this)
+                        .selectAll('.player')
+                        .data(group.elements, function(d) {
+                            return d.player.uid;});
+                    players
+                        .enter()
+                        .append('g')
+                        .attr('class', 'player')
+                        .on('mouseover', function(d){
+                            selectAllPlayer(ctx, d.player, d.group)
+                                .classed('selected', true);
+                        })
+                        .on('mouseout', function(d){
+                            selectAllPlayer(ctx, d.player, d.group)
+                                .classed('selected', false);
+                        })
+                        .call(function(enter){
+                            enter
+                                .append('rect')
+                                .attr('class', 'glass')
+                                .attr('width', ctx.colWidth)
+                                .attr('height', tableau_height(ctx))
+                                .attr('opacity', 0);
+                        })
+                        .merge(players)
+                        .attr('id', function(d){return uid_to_id(d.player.uid);})
+                        .attr('transform', function(d) {
+                            var x =  d.x * ctx.colWidth,
+                                y = d.y * ctx.rowHeight;
+                            return 'translate(' + x + ', ' + y + ')';
+                        });
+                    players
+                        .exit()
+                        .remove();
+                });
+        };
+    }
+
+    function tableau_notes(ctx) {
+        return function(selection){
+            var notes = selection
+                    .call(tableau_player(ctx))
                     .selectAll('.player')
-                    .data(group.elements, function(d) {
-                        return d.player.uid;});
-                players
-                    .enter()
-                    .append('g')
-                    .attr('class', 'player')
-                    .on('mouseover', function(d){
-                        selectAllPlayer(ctx, d.player, d.group)
-                            .classed('selected', true);
-                    })
-                    .on('mouseout', function(d){
-                        selectAllPlayer(ctx, d.player, d.group)
-                            .classed('selected', false);
-                    })
-                    .call(function(enter){
-                        enter
-                            .append('rect')
-                            .attr('class', 'glass')
-                            .attr('width', ctx.colWidth)
-                            .attr('height', tableau_height(ctx))
-                            .attr('opacity', 0);
-                        if( !opt.colHeaders ) {
-                            return;
-                        }
-                        enter
-                            .call(columnTitle, ctx)
-                            .call(function(selection){
+                    .selectAll('.note')
+                    .data(function(d){return _notes_data(ctx, {
+                        player: d.player.uid,
+                        playerData: d
+                    });}, function(d){return d._tableau_.day;});
+            notes
+                .enter()
+                .append('rect')
+                .attr('class', 'note')
+                .attr('width', ctx.colWidth - 1)
+                .attr('height', function(d) {
+                    if( !d.note ) return 0;
+                    return ctx.scalenotes(d.note);
+                })
+                .merge(notes)//update
+                .style('fill', ctx.noteScale)
+                .attr('transform', function(d){
+                    var y =  tableau_player_ty(ctx, d);
+                    return 'translate(0, ' + y + ')';
+                });
+            selection.call(tableau_dots(ctx));
+        };
+    }
+    
+    //create a new axis generator for players
+    function tableau_axisPlayer(ctx) {
+        return function(selection){
+            selection
+                .call(tableau_player(ctx));
+            selection
+                .selectAll('.group')
+                .each(function(d){
+                    var group = d3.select(this);
+                    if(!group.select('.groupTitleContainer').empty()) {
+                        return;
+                    }
+                    group
+                        .append('g')
+                        .attr('class', 'groupTitleContainer')
+                        .call(tableau_selection_title_transform(ctx), -1)
+                        .call(function(selection){
+                            if( selection.select('.team-symbol').empty()) {
                                 selection.call(tableau_teamSymbol(ctx));
                                 selection.select('.team-symbol')
-                                    .style('fill', function(d){
-                                        return ctx.teamScale(d.player.player.team);
-                                    })
-                                    .attr('transform', 'translate('
-                                          + (ctx.colWidth * 0.5)
-                                          + ', '
-                                          + (ctx.colHeaderHeight + ctx.groupHeaderHeight )
-                                          + ' )');
-                            });
-                        enter
-                            .append('text')
-                            .attr('class', 'poste')
-                            .attr('text-anchor', 'middle')
-                            .attr('y', ctx.colHeaderHeight
-                                  + 2 * ctx.groupHeaderHeight )
-                            .attr('x', ctx.colWidth * 0.5)
-                            .text(function(d){
-                                return d.player.player.poste[0];
-                            });
-                        
-                    })
-                    .merge(players)
-                    .attr('id', function(d){return uid_to_id(d.player.uid);})
-                    .call(function(player){
-                        player.select('.team-symbol')
-                            .attr('opacity', (group.level == 2 || group_isGroupedByTeam(group))?0:1);
-                        player.select('.poste')
-                            .attr('opacity', (group.level == 2  || group_isGroupedBy(group, 'poste')) ? 0 : 1);
-                        if( !opt.colHeaders ) {
-                            return;
-                        }
-                        player
-                            .select('.colTitle')
-                            .text(function(d, i){
-                                return d.title;
-                            });
-                    })
-                    .attr('transform', function(d) {
-                        var x =  d.x * ctx.colWidth,
-                            y = d.y * ctx.rowHeight;
-                        return 'translate(' + x + ', ' + y + ')';
-                    })
-                    .each(function(d){
-                        if( !opt.content ) {
-                            return;
-                        }
-                        var color = d3.scaleSequential(d3.interpolateBlues)
-                                .domain([0,9]);
-                        var notes = d3.select(this)
-                                .selectAll('.note')
-                                .data(_notes_data(ctx, {
-                                    player: d.player.uid,
-                                    playerData: d
-                                }), function(d){return d._tableau_.day;});
-                        notes
-                            .enter()
-                            .append('rect')
-                            .attr('class', 'note')
-                            .attr('width', ctx.colWidth - 1)
-                            .attr('height', function(d) {
-                                if( !d.note ) return 0;
-                                return ctx.scalenotes(d.note);
-                            })
-                        // function (d){
-                        //         return ctx.noteScale(d.note);})
-                            .merge(notes)//update
-                            .style('fill', ctx.noteScale)
-                            .attr('transform', function(d){
-                                var y =  tableau_player_ty(ctx, d);
-                                return 'translate(0, ' + y + ')';
-                            });
-                    });
-                players
-                    .exit()
-                    .remove();
-            });
-        groups
-            .exit()
-            .remove();
-
-        if( opt.content) {
-            svg.call(tableau_dots(ctx));
-        }
+                                    .attr('transform', "translate(0, -4)");
+                            }
+                        })
+                        .append('text')
+                        .attr('class', 'groupTitle');
+                })
+                .call(function(groups){
+                    groups.select('.groupTitleContainer')
+                        .select('.team-symbol')
+                        .style('fill', function(g){
+                            if( g.groupedby == 'team' )
+                                return ctx.teamScale(g.id);
+                            return '';})
+                        .attr("opacity", function(d) {
+                            return d.groupedby == 'team' ? 1 : 0;
+                        })
+                        .attr("opacity", function(d) {
+                            return d.groupedby == 'team' ? 1 : 0;
+                        });
+                    groups.select('.groupTitle')
+                        .attr('transform', function(d){
+                            var x = 0;
+                            if( _group_displayName(d) && d.groupedby == 'team') {
+                                x = ctx.groupHeaderHeight;
+                            }
+                            return 'translate(' + x + ',0)';
+                        })
+                        .text(function(d){
+                            return _group_displayName(d);})
+                        .classed('level1', function(d){
+                            return d.level == 1;})
+                        .classed('level2', function(d){
+                            return d.level == 2;});
+                });
+            selection
+                .selectAll('.group')
+                .each(function(group){
+                    var players = d3
+                            .select(this)
+                            .selectAll('.player');
+                    players
+                        .each(function(){
+                            var player = d3.select(this);
+                            if(! player.select('.colTitle').empty()) {
+                                return;}
+                            //init player 
+                            player
+                                .call(columnTitle, ctx)
+                                .call(function(selection){
+                                    selection.call(tableau_teamSymbol(ctx));
+                                    selection.select('.team-symbol')
+                                        .style('fill', function(d){
+                                            return ctx.teamScale(d.player.player.team);
+                                        })
+                                        .attr('transform', 'translate('
+                                              + (ctx.colWidth * 0.5)
+                                              + ', '
+                                              + (ctx.colHeaderHeight + ctx.groupHeaderHeight )
+                                              + ' )');
+                                });
+                            player
+                                .append('text')
+                                .attr('class', 'poste')
+                                .attr('text-anchor', 'middle')
+                                .attr('y', ctx.colHeaderHeight
+                                      + 2 * ctx.groupHeaderHeight )
+                                .attr('x', ctx.colWidth * 0.5)
+                                .text(function(d){
+                                    return d.player.player.poste[0];
+                                });
+                        });
+                    players
+                        .select('.team-symbol')
+                        .attr('opacity', (group.level == 2 || group_isGroupedByTeam(group))?0:1);
+                    players
+                        .select('.poste')
+                        .attr('opacity', (group.level == 2  || group_isGroupedBy(group, 'poste')) ? 0 : 1);
+                    players
+                        .select('.colTitle')
+                        .text(function(d, i){
+                            return d.title;
+                        });
+                });
+        };
     }
+    
 
     function tableau_teamSymbol(ctx) {
         var sym = d3.symbol()
@@ -794,51 +777,20 @@
             //whether to animate between two states
             transition:false
         }, opt);
-
-        if( ctx.groups ) {
-            //hide others
-            svg.select('.notes')
-                .attr('display', 'none');
-            svg.select('.colHeaders')
-                .attr('display', 'none');
-            //refresh groups
-            _refreshGroups(ctx, {
-                svg: ctx.svgHeader,
-                content: false,
-                colHeaders: true
-            });
-//            ctx.svgHeader.attr('height', ctx.topHeaderHeight());
-            _refreshGroups(ctx);
-            return;
-        }
-        
-        //clear some caches
-        ctx._players_x_ = null;
-        ctx._stack_notes_dirty = true;
-        //update bars position
-        svg
-            .selectAll('.note')
-            .attr('opacity', function(p){
-                if(playerByUID(ctx, p._tableau_.player).hidden) {
-                    return 0;
-                }
-                return 1;
-            })
-            .call(function(selection){
-                if( opt.transition ) {
-                    selection = selection.transition(transition);
-                }
-                tableau_selection_notes_transform(ctx)(selection);
-            });
-        //update colheaders position 
-        svg.selectAll('.colTitle')
-            .attr('opacity', function(p){
-                if(playerByUID(ctx, p.player).hidden) {
-                    return 0;
-                }
-                return 1;
-            })
-            .call(tableau_selection_title_transform(ctx));
+        //hide others
+        svg.select('.notes')
+            .attr('display', 'none');
+        svg.select('.colHeaders')
+            .attr('display', 'none');
+        //refresh groups
+        ctx
+            .svgHeader
+            .select('.players')
+            .call(tableau_axisPlayer(ctx));
+        ctx
+            .svg
+            .select('.players')
+            .call(tableau_notes(ctx));
     }
     
 
@@ -861,15 +813,6 @@
         return ctx._playersIndex[uid];
     }
 
-
-    // function _groupSumNotes(ctx, group) {
-    //     var i, items = group.elements,
-    //         tot = 0;;
-    //     for( i = 0; i < items.length; ++i) {
-    //         tot += itemSumNotes(ctx, items[i]);
-    //     }
-    //     return tot;
-    // }
 
     //operation is a funciton with a 'name' property defined which will be used
     //for caching the result in the item 
@@ -906,34 +849,13 @@
     function itemSumNotes() {
         return _itemSumNotes.apply(this, arguments);
     }
+
+
     var _itemNotesCount = _itemOperation(_notescount);
     function itemNotesCount() {
         return _itemNotesCount.apply(this, arguments);
     }
-    
-    // function itemSumNotes(ctx, item) {
-    //     var player, notes = [];
-    //     if( typeof(item) == 'string') {
-    //         item = playerByUID(ctx, item);
-    //     }  else if( item.uid ) {
-    //         item = playerByUID(ctx, item.uid);
-    //     } 
-    //     if( !('_sumnotes' in item ) ) {
-    //         if( item.player && item.player.notes) {
-    //             item._sumnotes = _sumnotes(item.player.notes);
-    //         }
-    //         else if( item.player && item.player.uid) {
-    //             return itemSumNotes(ctx, item.player);
-    //         }
-    //         else if( item.elements ) {
-    //             notes = item.elements.map(function(e){
-    //                 return itemSumNotes(ctx, e);
-    //             });
-    //             item._sumnotes = _sumnotes(notes);
-    //         }
-    //     }
-    //     return item._sumnotes;
-    // }
+
 
     function _notescount(notes) {
         var j, note, count = 0;
@@ -1061,18 +983,19 @@
             .append('g')
             .attr('class', 'players');
         ctx.svgHeader = header;
-        _refreshGroups(ctx, {
-            svg: header,
-            content: false,
-            colHeaders: true
-        });
+        header
+            .select('.players')
+            .call(tableau_axisPlayer(ctx));
         svg.append('g')
             .attr('class', 'players');
         ctx
             .svgRowHeader
             .append('g')
             .attr('class', 'axis y');
-        _refreshGroups(ctx);
+        ctx
+            .svg
+            .select('.players')
+            .call(tableau_notes(ctx));
     }
 
     function _notes_data(ctx, opt) {
@@ -1224,11 +1147,6 @@
                         + ctx.colHeaderHeight + ') rotate(' + (-45) + ')';
                 });
         };
-    }
-
-
-    function tableau_colHeaders(ctx, svg) {
-        _refreshGroups(ctx, svg, true);
     }
 
 

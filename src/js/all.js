@@ -144,7 +144,6 @@ $(function(){
     $('.chosen-select')
         .chosen()
         .change(function(e, value){
-            console.log('here' + value.selected);
             var val = $(e.target).val();
             if( value.selected && val.length > 1 ) {
                 if( val.indexOf(value.selected) == 0) {
