@@ -49,6 +49,22 @@ ul{
     display:flex;
     flex-direction: column;
     height: 500px;
+    .axis{
+        line{
+            stroke:gray;
+        }
+        &.y{
+            .domain{
+                display:none;
+            }
+        }
+    }
+    
+    .dots{
+        circle{
+            fill:lightgray;
+        }
+    }
     .header{
         order:1;
         flex-direction: row;
@@ -58,6 +74,7 @@ ul{
         &::-webkit-scrollbar { 
             display: none;
         }
+        margin-bottom:-5px;
     }
     .body{
         display:flex;
@@ -80,6 +97,23 @@ ul{
             height:100%;
         }
     }
+    .poste{
+        font-size:8px;
+    }
+    .player{
+        .glass{
+            fill:white;
+        }
+        &.selected{
+            .glass{
+                fill:red;
+            }
+            .colTitle {
+                font-size:12px;
+                font-weight: 500;
+            }
+        }
+    }
 }
 
 svg{
@@ -88,25 +122,33 @@ svg{
             fill:#eeeeee;
             stroke:blue;
         }
+        .header{
+            .separator{
+                stroke:gray;
+                stroke-width: 0.5px;
+            }
+            rect{
+                fill:#ddd;
+
+            }
+            
+        }
+    }
+    .groupTitleBackground{
+        fill:white;
     }
     .groupTitle{
         font-size:11px;
+        &.level1{
+            font-size: 11px;
+            font-weight: 500;
+        }
+        &.level2{
+            font-size: 11px;
+        }
     }
     .colTitle{
         font-size:@font-size;
-    }
-    .y.axis {
-        & line{
-            stroke:white;
-            stroke-opacity:0.2;
-        }
-        & path{
-            display: none;
-        }
-        & .zero line{
-            stroke:#ccc;
-            stroke-opacity:1;
-        }
     }
     .note{
         fill:#337ab7;

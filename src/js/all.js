@@ -141,7 +141,19 @@ $(function(){
     $(window).resize(adjustDrawerHeight);
     
 
-    $('.chosen-select').chosen();
+    $('.chosen-select')
+        .chosen()
+        .change(function(e, value){
+            console.log('here' + value.selected);
+            var val = $(e.target).val();
+            if( value.selected && val.length > 1 ) {
+                if( val.indexOf(value.selected) == 0) {
+                    val = [val[1], val[0]];
+                }
+            }
+            tableau._group($tableau[0], val);
+        })
+    ;
     
     function adjustDrawerHeight(){
         var topbarHeight =

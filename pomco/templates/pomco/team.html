@@ -10,9 +10,10 @@
         <input class="js-aggregate-days" type="checkbox"> Aggregate Days
       </label>
     </div>
-    <button class="btn btn-default" type="submit" onclick="tableau._group($tableau[0], 'team')">Group by Team</button>
-    <button class="btn btn-default" type="submit" onclick="tableau._group($tableau[0], 'poste')">Group by Poste</button>
-    <button class="btn btn-default" type="submit" onclick="tableau._group($tableau[0], null);">Clear group</button>
+    <select data-placeholder="Group by ..." class="chosen-select" multiple style="width:170px;">
+      <option value="team">Team</option>
+      <option value="poste">Poste</option>
+    </select>
     <div class="dropdown">
       <button class="btn btn-default dropdown-toggle" type="button" id="sortTotalMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         Order Total

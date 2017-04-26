@@ -1,3 +1,4 @@
+
 (function(){
 
     //EXPORTS
@@ -57,12 +58,41 @@
         ctx.aggregate = {players:false, days:false};
         ctx.teams = [];
         ctx.noteScale = tableau_scaleNote(ctx);
+        //height of the lines in the header showing team or poste
+        ctx.groupHeaderHeight = 10;
+        ctx.groupHeaderWidth = 12;
+        ctx.groupHeaderWidth2 = 10;
+        ctx.groupSpacing1 = 10;
+        ctx.groupSpacing2 = 10;
+        ctx.groupLevel = 0;
+        ctx.topHeaderHeight = function(){
+            return ctx.colHeaderHeight + (2 - ctx.groupLevel) * ctx.groupHeaderHeight;
+        };
+        ctx.labelAngle = -45;
+        ctx.xoffset = function(){
+                return -ctx.colHeaderHeight /
+                Math.tan(ctx.labelAngle * Math.PI / 180);  
+        };
+        ctx.gridWidth = function() {
+            var groups = ctx.groups,
+                i, width = ctx.colCount * ctx.colWidth + ctx.xoffset();
+            if( groups ) {
+                for( i = 0; i < groups.length; ++i) {
+                    width += ctx['groupSpacing' + groups[i].level];
+                    if( groups[i].title) {
+                        width += ctx.groupHeaderWidth;
+                    }
+                }
+            }
+            return width;
+        };
     }
 
 
     function tableau_scaleDay(ctx) {
         var scale = d3
                 .scaleSequential(d3.interpolateBlues)
+        //        .scaleSequential(d3.interpolateRdYlGn)
                 .domain([ctx.rowCount, 0]);
         return function(d) {
             return scale(d._tableau_.day);
@@ -101,16 +131,28 @@
             ctx.aggregate.days = val;
         }
         var t = d3.transition()
-                .duration(750)
+                .duration(550)
         ;
         //adjust viewport
-        var newheight = ctx.scalenotes(_maxSumNotes(ctx));
+        var newheight = ctx.scalenotes(_maxSumNotes(ctx)) + 10;
         ctx.noteScale = tableau_scaleDay(ctx);
         if( !ctx.aggregate.days ) {
-            newheight = tableau_height(ctx);
+            var delta = tableau_height(ctx) - newheight;
             ctx.noteScale = tableau_scaleNote(ctx);
-        }
-        newheight += 10;
+            ctx
+                .body
+                .transition(t)
+            //credits to http://bl.ocks.org/humbletim/5507619
+                .tween("scrollTween", function(){
+                    var i = d3.interpolateNumber(
+                        this.scrollTop,
+                        this.scrollTop + delta);
+                    return function(t) {
+                        ctx.body.node().scrollTop = i(t);
+                    };
+                });
+            newheight = tableau_height(ctx);
+        } 
         ctx.svg.select('.players')
             .transition(t)
             .attr('transform','translate(0, '
@@ -129,13 +171,33 @@
                 var p = d._tableau_.playerData,
                     day = d._tableau_.day,
                     count = playerNotesStack(ctx, p.player)[day].count;
-                return (p.globalNotesCount + count) * (t.duration() / 750);
+                return (p.globalNotesCount + count) * (t.duration() / 500);
             })
             .style('fill', ctx.noteScale)
             .attr('transform', function(d){
                 var y =  tableau_player_ty(ctx, d);
                 return 'translate(0, ' + y + ')';
             });
+        ctx.svg
+            .selectAll('.dots')
+            .attr('display', ctx.aggregate.days ? "none" : true);
+        if( ctx.aggregate.days ) {
+            var scale = d3.scaleLinear()
+                    .domain([0, 9 * ctx.rowCount])
+                    .range([newheight, 0]);
+            var axis = d3
+                    .axisLeft(scale)
+                    .tickSize(5);
+            ctx.svgRowHeader
+                .select('.axis.y')
+                .call(axis)
+                .attr('transform', 'translate(' + ctx.rowHeaderWidth + ', 0)');
+        }
+        
+        ctx.svgRowHeader.select('.rowHeaders')
+            .attr('display', ctx.aggregate.days ? "none":true);
+        ctx.svgRowHeader.select('.axis.y')
+            .attr('display', (!ctx.aggregate.days) ? "none":true);
     }
 
 
@@ -155,32 +217,39 @@
 
     function _groupby(players, prop) {
         var i, player, g, groupindex = {},
-            groupkey, groups = [], propname;
-        if( typeof(prop) == 'string') {
-            propname = prop;
-            prop = function(player){
-                return player[propname];
-            };
-        }
+            groupkey = "", groups = [], propname;
+        propname = prop;
         for( i = 0; i < players.length; ++i ) {
             player = players[i];
-            groupkey = prop(player.player);
-            g = groupindex[groupkey];
+            if( prop ) {
+                groupkey = player.player[propname];
+                g = groupindex[groupkey];
+            }
             if( !g ) {
                 g = {
                     elements: [],
+                    //used when 2 level of grouping
+                    subTitle: "",
                     title: groupkey,
                     id: groupkey,
                     order: groups.length,
+                    groupedby: prop,
                     x: 0,
-                    y: 0
+                    y: 0,
+                    //indicates level of grouping: [1, 2]
+                    level: 1,
+                    parent: null,
+                    _initialOrder: i
                 };
                 groups.push(g);
-                groupindex[groupkey] = g;
+                if( prop ) {
+                    groupindex[groupkey] = g;
+                }
             }
             g.elements.push({
                 title: player.player.nom,
                 player: player,
+                group: g,
                 x: 0,
                 y: 0
             });
@@ -188,10 +257,36 @@
         return groups;
     }
 
+    function group_isGroupedBy(group, by) {
+        if( group.groupedby == by ) return true;
+        if( group.parent ) {
+            return group_isGroupedByTeam(group.parent);
+        }
+        return false;
+    }
+
+    
+    function group_isGroupedByTeam(group) {
+        return group_isGroupedBy(group, 'team');
+    }
+
+    
+    function _group_x(ctx, g) {
+        var i = ctx.groups.indexOf(g),
+            groups = ctx.groups.slice(),
+            x = 0;
+        groups.sort(function(g1, g2){return g1.order - g2.order;});
+        for( i = 0; i < groups.length; ++i) {
+            
+        }
+        
+    }
+
     function updateGroupsPosition(ctx) {
         //compute groups position
         var groups = ctx.groups,el,
-            j, i, g, elements, notescount = 0;
+            j, i, g, elements, notescount = 0,
+            posx = 0;
         if(!groups) {
             return;
         }
@@ -206,8 +301,17 @@
             }else {
                 g.x = groups[i-1].x + groups[i-1].elements.length;
             }
+            if( g.level == 1) {
+                posx += ctx.groupHeaderWidth;
+            } else {
+                posx += ctx.groupHeaderWidth2;
+            }
+            g.posx = posx;
             //sort members
             elements = g.elements;
+            if( !elements ) {
+                continue;
+            }
             elements.sort(function(e1, e2){
                 return e1.player.order - e2.player.order;
             });
@@ -217,8 +321,39 @@
                 el.globalX = j + g.x;
                 el.globalNotesCount = notescount;
                 notescount += itemNotesCount(ctx, el.player);
+                posx += ctx.colWidth;
+            }
+            if( g.level == 1) {
+                posx += ctx.groupSpacing1;
+            } else {
+                posx += ctx.groupSpacing2;
             }
         }
+        ctx.gridWidth = function(){
+            return posx + ctx.xoffset();
+        };
+    }
+
+
+    function _group_displayName(d) {
+        var name = d.subTitle || d.title;
+        if( !name ) {
+            return name;
+        }
+        if( d.groupedby == 'poste') {
+            name = {
+                'D': 'Defender',
+                'G': 'Goalkeeper',
+                'A': 'Forward',
+                'M': 'Middfield'
+            }[name] + " (" + name + ")";
+        }
+        if( d.level == 2) {
+        } else {
+            name = name.toUpperCase();
+        }
+        
+        return name;
     }
     
     //_group(el, 'player')
@@ -227,19 +362,62 @@
     function _group(el, opt) {
         opt = opt || null;
         var ctx = context(el),
-            players = ctx.players,
-            groups, svg = ctx.svg;
-        if( opt == 'team') {
-            ctx.groups = _groupby(players, 'team');//function(player){ return player.team;});
-        }
-        else if( opt == 'poste') {
-            ctx.groups = _groupby(players, 'poste');//function(player){ return player.poste;});
-        }
-        else {
-            ctx.groups = _groupby(players, function(player){return 'all';});
-        }
+            players = ctx.players,j,
+            groups, svg = ctx.svg, i,
+            subgroups, subgroup, groupTitle, grouplevel = 0;
+        if( Array.isArray(opt) && opt.length > 1) {
+            groups = _groupby(players, opt[0]);
+            ctx.groups = [];
+            for( i = 0; i < groups.length; ++i ) {
+                players = groups[i].elements.map(function(e){return e.player;});
+                
+                //adds and empty group for showing title
+                groupTitle = $.extend(groups[i],{
+                    elements:[],
+                    order:ctx.groups.length
+                });
+                ctx.groups.push(groupTitle);
 
+                //adds elements
+                subgroups = _groupby(players, opt[1]);
+                for( j = 0; j < subgroups.length; ++j ) {
+                    subgroup = subgroups[j];
+                    subgroup.level = 2;
+                    subgroup.id = groups[i].id + "_" + subgroups[j].id;
+                    subgroup.subTitle = subgroup.title;
+                    subgroup.title = null;
+                    subgroup.order += ctx.groups.length;
+                    subgroup._initialOrder += ctx.groups.length;
+                    subgroup.parent = groups[i];
+                }
+                
+                ctx.groups = ctx.groups.concat(subgroups);
+                grouplevel = 2;
+            }
+        } else {
+            if( Array.isArray(opt)) {
+                if( opt.length == 1) {
+                    opt = opt[0];
+                } else if (!opt.length) {
+                    opt = null;
+                }
+            }
+            if( opt == 'team') {
+                ctx.groups = _groupby(players, 'team');
+                grouplevel = 1;
+            }
+            else if( opt == 'poste') {
+                ctx.groups = _groupby(players, 'poste');
+                grouplevel = 1;
+            }
+            else {
+                ctx.groups = _groupby(players);//, function(player){return 'all';});
+                grouplevel = 0;
+            }
+        }
+        ctx.groupLevel = grouplevel;
         _refresh(ctx);
+        
     }
 
     function _refreshGroups(ctx, opt) {
@@ -254,6 +432,8 @@
             ctx.groups = _groupby(players, function(){return 'all';});
         }
         updateGroupsPosition(ctx);
+        //update container width
+        svg.attr('width', ctx.gridWidth());
         groups = svg
             .select('.players')
             .selectAll('.group')
@@ -262,37 +442,93 @@
             .enter()
             .append('g')
             .attr('class', 'group')
-            .call(function(group){
-                if( !opt.colHeaders ) {
-                    return;
-                }
-                group.append('rect')
-                    .attr('class', 'background')
-                    .attr('y', ctx.colHeaderHeight + 5)
-                    .attr('height', 10);
-                group.append('text')
-                    .attr('class', 'groupTitle')
-                    .attr('y', ctx.colHeaderHeight + 15)
-                    .attr('text-anchor', 'middle');
+            .call(function(groups){
+                groups.append('path');
+                if( !opt.colHeaders ) return;
+                groups.append('rect')
+                    .attr('class', 'groupTitleBackground')
+                    .call(tableau_selection_title_transform(ctx), -1);
+                groups
+                    .append('g')
+                    .attr('class', 'groupTitleContainer')
+                    .call(tableau_selection_title_transform(ctx), -1)
+                    .call(function(selection){
+                        if( selection.select('.team-symbol').empty()) {
+                            selection.call(tableau_teamSymbol(ctx));
+                            selection.select('.team-symbol')
+                                .attr('transform', "translate(0, -4)");
+                        }
+                    })
+                    .append('text')
+                    .attr('class', 'groupTitle');
             })
             .merge(groups)
-            .call(function(group){
-                if( !opt.colHeaders ) {
-                    return;
-                }
-                group.select('.background')
-                    .attr('width', function(d){
-                        return d.elements.length * ctx.colWidth;
-                    });
-                group.select('.groupTitle')
-                    .attr('x', function(d){
-                        return d.elements.length * ctx.colWidth * 0.5;})
-                    .text(function(d){
-                        return d.title;});
-            })
-            .attr('transform', function(d){
+            .attr('transform', function(d) {
                 var x = d.x * ctx.colWidth;
+                //make space for the group title if any
+                if( _group_displayName(d) ) {
+                    x += ctx.groupHeaderWidth * (d.order + 1);
+                }
+                x = d.posx;
                 return 'translate(' + x + ', 0)';
+            })
+            .attr('id', function(d){
+                return uid_to_id(d.id);})
+            .call(function(groups) {
+                groups.select('.groupTitleContainer')
+                    .select('.team-symbol')
+                    .style('fill', function(g){
+                        if( g.groupedby == 'team' )
+                            return ctx.teamScale(g.id);
+                        return '';})
+                    .attr("opacity", function(d) {
+                        return d.groupedby == 'team' ? 1 : 0;
+                    })
+                    .attr("opacity", function(d) {
+                        return d.groupedby == 'team' ? 1 : 0;
+                    });
+                groups.select('.groupTitle')
+                    .attr('transform', function(d){
+                        var x = 0;
+                        if( _group_displayName(d) && d.groupedby == 'team') {
+                            x = ctx.groupHeaderHeight;
+                        }
+                        return 'translate(' + x + ',0)';
+                    })
+                    .text(function(d){
+                        return _group_displayName(d);})
+                    .classed('level1', function(d){
+                        return d.level == 1;})
+                    .classed('level2', function(d){
+                        return d.level == 2;});
+                groups.select('.divider')
+                    .attr('d', function(d) {
+                        if( !(d.title || d.subTitle)) {
+                            return "";
+                        }
+                        var deltax = 14;
+                            data = [];
+                        if( opt.colHeaders ) {
+                            data = [
+                                [- deltax, tableau_height(ctx)],
+                                [ - deltax, ctx.colHeaderHeight],
+                                [ctx.xoffset() - deltax, 0]
+                            ];
+                        } else {
+                            data = [
+                                [- deltax, tableau_height(ctx)],
+                                [ - deltax, 0]
+                            ];
+                        }
+                        return d3.line()(data);
+                    })
+                    .attr('stroke', function(d){
+                        if( d.groupedby == 'team') {
+                        }
+                        if( d.level == 1 ) return 'gray';
+                        return 'lightgray';})
+                    .style('stroke-width', ctx.groupHeaderWidth * Math.sin(Math.abs(ctx.labelAngle) * Math.PI / 180))
+                    .attr('fill', 'none');
             })
             .each(function(group) {
                 players = d3.select(this)
@@ -303,30 +539,57 @@
                     .enter()
                     .append('g')
                     .attr('class', 'player')
+                    .on('mouseover', function(d){
+                        selectAllPlayer(ctx, d.player, d.group)
+                            .classed('selected', true);
+                    })
+                    .on('mouseout', function(d){
+                        selectAllPlayer(ctx, d.player, d.group)
+                            .classed('selected', false);
+                    })
                     .call(function(enter){
+                        enter
+                            .append('rect')
+                            .attr('class', 'glass')
+                            .attr('width', ctx.colWidth)
+                            .attr('height', tableau_height(ctx))
+                            .attr('opacity', 0);
                         if( !opt.colHeaders ) {
                             return;
                         }
-                        var sym = d3.symbol()
-                                .type(d3.symbolSquare)
-                                .size(50);
                         enter
                             .call(columnTitle, ctx)
-                            .append('path')
-                            .attr('class', 'team-symbol')
-                            .attr('d', sym)
-                            .attr('transform', 'translate('
-                                  + (ctx.colWidth * 0.5)
-                                  + ', '
-                                  + (ctx.colHeaderHeight + 10 )
-                                  + ' )')
-                            .style('fill', function(d){
-                                return ctx.teamScale(d.player.player.team);
+                            .call(function(selection){
+                                selection.call(tableau_teamSymbol(ctx));
+                                selection.select('.team-symbol')
+                                    .style('fill', function(d){
+                                        return ctx.teamScale(d.player.player.team);
+                                    })
+                                    .attr('transform', 'translate('
+                                          + (ctx.colWidth * 0.5)
+                                          + ', '
+                                          + (ctx.colHeaderHeight + ctx.groupHeaderHeight )
+                                          + ' )');
+                            });
+                        enter
+                            .append('text')
+                            .attr('class', 'poste')
+                            .attr('text-anchor', 'middle')
+                            .attr('y', ctx.colHeaderHeight
+                                  + 2 * ctx.groupHeaderHeight )
+                            .attr('x', ctx.colWidth * 0.5)
+                            .text(function(d){
+                                return d.player.player.poste[0];
                             });
                         
                     })
                     .merge(players)
+                    .attr('id', function(d){return uid_to_id(d.player.uid);})
                     .call(function(player){
+                        player.select('.team-symbol')
+                            .attr('opacity', (group.level == 2 || group_isGroupedByTeam(group))?0:1);
+                        player.select('.poste')
+                            .attr('opacity', (group.level == 2  || group_isGroupedBy(group, 'poste')) ? 0 : 1);
                         if( !opt.colHeaders ) {
                             return;
                         }
@@ -378,8 +641,64 @@
         groups
             .exit()
             .remove();
+
+        if( opt.content) {
+            svg.call(tableau_dots(ctx));
+        }
     }
 
+    function tableau_teamSymbol(ctx) {
+        var sym = d3.symbol()
+                .type(d3.symbolSquare)
+                .size(50);
+        return function(selection, team){
+            selection.append('path')
+                .attr('class', 'team-symbol')
+                .attr('d', sym)
+                .style('fill', function(d){
+                    if( team )
+                        return ctx.teamScale(team(d));
+                    return 'lightgray';
+                });
+        };
+    }
+
+    function tableau_dots(ctx) {
+        return function(selection) {
+            selection
+                .selectAll('.group')
+                .each(function(group){
+                    var sel = d3.select(this),
+                        dots,data = [], i, 
+                        groupColCount = group.elements.length;
+                    dots = sel
+                        .select('.dots');
+                    for( i = 0; i < ctx.rowCount * (groupColCount + 1); ++i ) {
+                        data.push(i);
+                    }                    
+                    if( dots.empty()) {
+                        dots = sel
+                            .append('g')
+                            .attr('class', 'dots');
+                    }
+                    dots = dots
+                        .selectAll('circle')
+                        .data(data);
+                    dots
+                        .enter()
+                        .append('circle')
+                        .attr('cx', function(d){
+                            return Math.floor(d / ctx.rowCount) * ctx.colWidth;})
+                        .attr('cy', function(d) {
+                            return ctx.scaley(d % ctx.rowCount);})
+                        .attr('r', 1)
+                        .attr('class', 'dot');
+                    dots.exit().remove();
+                });
+        };
+    }
+
+    
     //opt could be either '<', '>' or omitted
     // omitted or falsy means revert to initial ordering
     // wehre '<' and '>' means sort by total score in ascending vs descending order
@@ -390,8 +709,9 @@
             i, player, coef = 1;
         //update order
         _sortItems(ctx, players, opt);
-        _sortItems(ctx, ctx.groups, opt);
-        //refresh
+        //TODO: fix sorting group
+        //TODO: figure out how sorting group is supposed to behave
+//        _sortItems(ctx, ctx.groups, opt);
         _refresh(ctx);
     }
 
@@ -487,6 +807,7 @@
                 content: false,
                 colHeaders: true
             });
+//            ctx.svgHeader.attr('height', ctx.topHeaderHeight());
             _refreshGroups(ctx);
             return;
         }
@@ -675,7 +996,7 @@
         
     }
 
-    
+
     function init(el, opt){
         var ctx = context(el),
             svg, i, j, player,
@@ -701,6 +1022,7 @@
             .select(el)
             .append('div')
             .attr('class', 'tableau-container');
+        ctx.container = container;
         var header = container
                 .append('div')
                 .attr('class', 'header')
@@ -718,6 +1040,7 @@
         _sync_scroll(main, header);
         //save svg ref to ctx for future reuse
         ctx.svg = svg;
+        ctx.body = body;
         ctx.scalenotes = d3.scaleLinear()
 	    .domain([0, 9])
 	    .range([0, ctx.rowHeight - 2]);
@@ -733,10 +1056,7 @@
                           );
         header = header.append('svg')
             .attr('width', svg.attr('width'))
-            .attr('height', ctx.colHeaderHeight)
-            .append('g')
-        //todo bind y translation to number of groups level?
-            .attr('transform', 'translate(0, -16)');
+            .attr('height', ctx.topHeaderHeight());
         header
             .append('g')
             .attr('class', 'players');
@@ -748,6 +1068,10 @@
         });
         svg.append('g')
             .attr('class', 'players');
+        ctx
+            .svgRowHeader
+            .append('g')
+            .attr('class', 'axis y');
         _refreshGroups(ctx);
     }
 
@@ -894,10 +1218,10 @@
             var tx;
             selection
                 .attr('transform', function(d){
-                    tx = (x == null) ? tableau_player_tx(ctx,d.player) : x;
+                    tx = (x == null) ? tableau_player_tx(ctx,d.player) : ctx.scalex(x);
                     tx += 5;
                     return 'translate(' + tx + ','
-                        + ctx.colHeaderHeight + ') rotate(-45)';
+                        + ctx.colHeaderHeight + ') rotate(' + (-45) + ')';
                 });
         };
     }
@@ -941,7 +1265,7 @@
             return "_" + member;
         }
         var id_tokens = 
-                member.split(/[\(\)\ \.]+/);
+                member.split(/[\(\)\ \.']+/);
         id_tokens = id_tokens.filter(function (t){ return t;});
         return id_tokens.join("__");
     }
@@ -974,5 +1298,15 @@
             });
         }
     }
-    
+
+
+    function selectAllPlayer(ctx, player, group){
+        var selector = '#' + uid_to_id(player.uid);
+        if( group && group.id ) {
+            selector = '#' + uid_to_id(group.id) + " " + selector;
+        }
+        return ctx
+            .container
+            .selectAll(selector);
+    }
 })()

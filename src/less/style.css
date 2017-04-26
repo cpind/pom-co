@@ -6935,12 +6935,22 @@ ul {
   flex-direction: column;
   height: 500px;
 }
+.tableau-container .axis line {
+  stroke: gray;
+}
+.tableau-container .axis.y .domain {
+  display: none;
+}
+.tableau-container .dots circle {
+  fill: lightgray;
+}
 .tableau-container .header {
   order: 1;
   flex-direction: row;
   flex: 0 0 auto;
   overflow-y: hidden;
   overflow-x: visible;
+  margin-bottom: -5px;
 }
 .tableau-container .header::-webkit-scrollbar {
   display: none;
@@ -6966,26 +6976,45 @@ ul {
   overflow-y: hidden;
   height: 100%;
 }
+.tableau-container .poste {
+  font-size: 8px;
+}
+.tableau-container .player .glass {
+  fill: white;
+}
+.tableau-container .player.selected .glass {
+  fill: red;
+}
+.tableau-container .player.selected .colTitle {
+  font-size: 12px;
+  font-weight: 500;
+}
 svg .group .background {
   fill: #eeeeee;
   stroke: blue;
 }
+svg .group .header .separator {
+  stroke: gray;
+  stroke-width: 0.5px;
+}
+svg .group .header rect {
+  fill: #ddd;
+}
+svg .groupTitleBackground {
+  fill: white;
+}
 svg .groupTitle {
+  font-size: 11px;
+}
+svg .groupTitle.level1 {
+  font-size: 11px;
+  font-weight: 500;
+}
+svg .groupTitle.level2 {
   font-size: 11px;
 }
 svg .colTitle {
   font-size: 8px;
-}
-svg .y.axis line {
-  stroke: white;
-  stroke-opacity: 0.2;
-}
-svg .y.axis path {
-  display: none;
-}
-svg .y.axis .zero line {
-  stroke: #ccc;
-  stroke-opacity: 1;
 }
 svg .note {
   fill: #337ab7;
