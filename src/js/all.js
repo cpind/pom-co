@@ -197,6 +197,18 @@ $(function(){
         $('.sidepanel').toggleClass('show');
     });
 
+
+    $('#slider-range').slider({
+        range:true,
+        min: 0,
+        max: 38,
+        values: [0,38],
+        slide: function( event, ui ) {
+            console.log(ui.values[0] + ' ' + ui.values[1]);
+            tableau._filterDays($tableau[0], ui.values);//setRenderMode($tableau[0], 'days');
+        }
+        
+    });
     
     $('.js-add-player').on('click', function(event){
         var $target = event.target,

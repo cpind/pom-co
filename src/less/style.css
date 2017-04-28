@@ -6930,6 +6930,11 @@ ul {
 .alert {
   margin-top: -20px;
 }
+#slider-range {
+  display: inline-block;
+  width: 150px;
+  margin-left: 40px;
+}
 .main-container {
   flex-direction: row;
   display: flex;

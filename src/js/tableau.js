@@ -7,7 +7,8 @@
         _filterPlayer:_filterPlayer,
         _sort:_sort,
         aggregate:_aggregate,
-        _group:_group
+        _group:_group,
+        _filterDays:_filterDays
     };
 
     //tests:
@@ -121,13 +122,17 @@
     // for y axis:  uses stack
     // for x axis: uses distribution
     function _aggregate(el, entity, val) {
-        var ctx = context(el);
+        var ctx = context(el),
+            players = ctx.svg.select('.players');
+        ctx.svg.call(tableau_select(ctx), 'player');
         if( entity == 'players') {
             ctx.aggregate.players = val;
         }
         if( entity == 'days') {
             ctx.aggregate.days = val;
         }
+        //clear stacks;
+        ctx._stacks = null;
         var t = d3.transition()
                 .duration(550);
         //adjust viewport
@@ -150,7 +155,8 @@
                 });
             newheight = tableau_height(ctx);
         } 
-        ctx.svg.select('.players')
+        ctx.svg
+            .select('.players')
             .transition(t)
             .attr('transform','translate(0, '
                   + (newheight - tableau_height(ctx) )
@@ -161,7 +167,10 @@
         ctx.svgRowHeader
             .transition(t)
             .attr('height', newheight);
-        ctx.svg.selectAll('.note')
+        var playerStacks = {};
+        ctx.svg
+            .select('.players')
+            .selectAll('.note[opacity="1"]')
             .transition(t)
             .delay(function(d){
                 var p = d._tableau_.playerData,
@@ -170,10 +179,7 @@
                 return (p.globalNotesCount + count) * (t.duration() / 500);
             })
             .style('fill', ctx.noteScale)
-            .attr('transform', function(d){
-                var y =  tableau_player_ty(ctx, d);
-                return 'translate(0, ' + y + ')';
-            });
+            .attr('transform', tableau_noteTransform(ctx));
         ctx.svg
             .selectAll('.dots')
             .attr('display', ctx.aggregate.days ? "none" : true);
@@ -189,10 +195,11 @@
                 .call(axis)
                 .attr('transform', 'translate(' + ctx.rowHeaderWidth + ', 0)');
         }
-        
-        ctx.svgRowHeader.select('.rowHeaders')
+        ctx.svgRowHeader
+            .select('.rowHeaders')
             .attr('display', ctx.aggregate.days ? "none":true);
-        ctx.svgRowHeader.select('.axis.y')
+        ctx.svgRowHeader
+            .select('.axis.y')
             .attr('display', (!ctx.aggregate.days) ? "none":true);
     }
 
@@ -416,6 +423,9 @@
             }
         }
         ctx.groupLevel = grouplevel;
+        //switch to document by player 
+        ctx.svg
+            .call(tableau_select(ctx), 'player');
         _refresh(ctx);
     }
 
@@ -508,22 +518,6 @@
                         .enter()
                         .append('g')
                         .attr('class', 'player')
-                        .on('mouseover', function(d){
-                            selectAllPlayer(ctx, d.player, d.group)
-                                .classed('selected', true);
-                        })
-                        .on('mouseout', function(d){
-                            selectAllPlayer(ctx, d.player, d.group)
-                                .classed('selected', false);
-                        })
-                        .call(function(enter){
-                            enter
-                                .append('rect')
-                                .attr('class', 'glass')
-                                .attr('width', ctx.colWidth)
-                                .attr('height', tableau_height(ctx))
-                                .attr('opacity', 0);
-                        })
                         .merge(players)
                         .attr('id', function(d){return uid_to_id(d.player.uid);})
                         .attr('transform', function(d) {
@@ -540,16 +534,81 @@
         };
     }
 
-    function tableau_notes(ctx) {
+
+    function tableau_playerSelected(ctx){
         return function(selection){
+            selection
+                .call(tableau_player(ctx))
+            //                .call(function(selection
+                .selectAll('.player')
+                .each(function(d){
+                    if( !d3.select(this)
+                        .select('rect.glass')
+                        .empty()) {
+                        return;
+                    }
+                    d3.select(this)
+                        .append('rect')
+                        .attr('class', 'glass')
+                        .attr('width', ctx.colWidth)
+                        .attr('height', tableau_height(ctx))
+                        .attr('opacity', 0);
+                })
+                .on('mouseover', function(d){
+                    selectAllPlayer(ctx, d.player, d.group)
+                        .classed('selected', true);
+                })
+                .on('mouseout', function(d){
+                    selectAllPlayer(ctx, d.player, d.group)
+                        .classed('selected', false);
+                });
+        };
+    }
+
+    function tableau_noteTransform(ctx) {
+        var playerStacks = {};
+        return function(d){
+            var y;
+            if( ctx.aggregate.days ) {
+                var player = playerByUID(ctx, d._tableau_.player),
+                    stack = playerNotesStack(ctx, player),//playerStacks[player.uid],
+                    day = d._tableau_.day,
+                    uid = player.uid;
+                if( !stack) {
+                    stack = _build_notes_stack(ctx, uid);
+                    playerStacks[uid] = stack;
+                }
+                y =  stack[day].ty;
+            } else {
+                y = tableau_player_ty(ctx, d);
+            }
+            return 'translate(0, ' + y + ')';
+        };
+    }
+    
+    function tableau_notes(ctx) {
+        return function(selection, day){
             var notes = selection
                     .call(tableau_player(ctx))
                     .selectAll('.player')
                     .selectAll('.note')
-                    .data(function(d){return _notes_data(ctx, {
-                        player: d.player.uid,
-                        playerData: d
-                    });}, function(d){return d._tableau_.day;});
+                    .data(function(d){
+                        if( !day && !ctx.svg.select('.days').empty()) {
+                            //sync with days in document grouped by day
+                            day = ctx
+                                .svg
+                                .select('.days')
+                                .selectAll('.day[opacity="1"]')
+                                .data();
+                        }
+                        var data = _notes_data(ctx, {
+                            player: d.player.uid,
+                            playerData: d,
+                            day: day
+                        });
+                        return data;
+                    }, function(d){return d._tableau_.day;});
+            var notetransform = tableau_noteTransform(ctx);
             notes
                 .enter()
                 .append('rect')
@@ -560,12 +619,24 @@
                     return ctx.scalenotes(d.note);
                 })
                 .merge(notes)//update
+                .attr('opacity', function(d){
+                    if( !d.note) return 0;
+                    return 1;
+                })
                 .style('fill', ctx.noteScale)
                 .attr('transform', function(d){
-                    var y =  tableau_player_ty(ctx, d);
-                    return 'translate(0, ' + y + ')';
+                    var y;// =  tableau_player_ty(ctx, d);
+                    if( day && !Array.isArray(day) ) {
+                        return 'translate(0, 0)';
+                    }
+                    return notetransform(d);
+                })
+//                .attr('transform', tableau_noteTransform(ctx))
+            ;
+            notes.exit()
+                .attr('opacity', function(){
+                    return 0;
                 });
-            selection.call(tableau_dots(ctx));
         };
     }
 
@@ -655,7 +726,8 @@
     function tableau_axisPlayer(ctx) {
         return function(selection){
             selection
-                .call(tableau_player(ctx));
+                .call(tableau_player(ctx))
+                .call(tableau_playerSelected(ctx));
             selection
                 .selectAll('.group')
                 .each(function(d){
@@ -822,8 +894,9 @@
         _sortItems(ctx, players, opt);
         //TODO: fix sorting group
         //TODO: figure out how sorting group is supposed to behave
-//        _sortItems(ctx, ctx.groups, opt);
-        _refresh(ctx);
+        //        _sortItems(ctx, ctx.groups, opt);
+        ctx.svg.call(tableau_select(ctx), 'player');
+        ctx.svg.call(tableau_player(ctx));
     }
 
     function _sortItems(ctx, items, opt) {
@@ -898,6 +971,87 @@
 
     }
 
+    
+    function _filterDays(el, range) {
+        var ctx = context(el),
+            svg = ctx.svg,
+            players = svg.select('.players'),
+            days = ctx.svg.select('.days');
+        if( ctx.aggregate.days ) {
+            //todo
+        } else {
+            //should be moved into tableau_select(ctx), 'day'
+            if(players.attr('display') != "none"){
+                if( days.empty()) {
+                    //init group by days
+                    days = ctx.svg.append('g')
+                        .attr('class', 'days');
+                    days.append('g')
+                        .attr('class', 'listener');
+                }
+                days
+                    .call(tableau_days(ctx), range)
+                    .selectAll('.day')
+                    .attr('transform', function(d){
+                        var tr = d3.select(this).attr('transform'),
+                            sc = "scale(1, -1)";
+                        if( !tr.endsWith(sc) ) {
+                            tr = tr + sc;
+                        }
+                        return tr;
+                    })
+                    .each(function(d){
+                        d3.select(this)
+                            .call(tableau_notes(ctx), d);
+                    });
+                //update days
+                days.select('.listener')
+                    .call(tableau_playerSelected(ctx));
+                players.attr('display', 'none');
+                days.attr('display', 'true');
+            }
+            days
+                .call(tableau_days(ctx), range)
+                .selectAll('.day')
+                .attr('transform', function(d){
+                    var tr = d3.select(this).attr('transform'),
+                        sc = "scale(1, -1)";
+                    if( !tr.endsWith(sc) ) {
+                        tr = tr + sc;
+                    }
+                    return tr;
+                });
+            ctx
+                .svgRowHeader
+                .select('.rowHeaders')
+                .call(tableau_days(ctx), range);
+        }
+    }
+
+
+    function tableau_select(ctx) {
+        return function(selection, mode){
+            if( mode == 'player' ) {
+                if( selection
+                    .select('.players')
+                    .attr('display') != 'none') {
+                    return;
+                }
+                selection
+                    .select('.players')
+                    .attr('display', 'true')
+                    .call(tableau_notes(ctx));
+                selection
+                    .select('.days')
+                    .attr('display', 'none');
+            } else if( mode == 'day') {
+                
+            }
+        };
+    }
+
+    
+    //refresh the document by players
     function _refresh(ctx, opt) {
         var svg = ctx.svg;
         //options
@@ -910,6 +1064,8 @@
             .attr('display', 'none');
         svg.select('.colHeaders')
             .attr('display', 'none');
+        //switch to group by players if not already
+        ctx.svg.call(tableau_select(ctx), 'player');
         //refresh groups
         ctx
             .svgHeader
@@ -918,7 +1074,8 @@
         ctx
             .svg
             .select('.players')
-            .call(tableau_notes(ctx));
+            .call(tableau_notes(ctx))
+            .call(tableau_dots(ctx));
     }
     
 
@@ -1127,13 +1284,17 @@
         ctx
             .svg
             .select('.players')
-            .call(tableau_notes(ctx));
+            .call(tableau_notes(ctx))
+            .call(tableau_playerSelected(ctx))
+            .call(tableau_dots(ctx))
+        ;
     }
 
     function _notes_data(ctx, opt) {
         opt = $.extend({
             player:null,
-            playerData:null
+            playerData:null,
+            day: null
         }, opt);
         var j, i, player, count,
             d, data = [],
@@ -1155,6 +1316,25 @@
                 data.push( d );
             }
         }
+        if( !opt.day) {
+            return data;
+        }
+        if(typeof(opt.day.id) == "number")  {
+            return data.filter(function(d){
+                return d._tableau_.day == opt.day.id;});
+        }
+        var days = {};
+        opt.day.forEach(function(d){
+            days[d.id] = d;
+        });
+        data = data.filter(function(d){
+            var day = days[d._tableau_.day];
+            if( !day ) {
+                return false;
+            }
+            d._tableau_._day_ = day;
+            return true;
+        });
         return data;
     }
 
@@ -1169,24 +1349,21 @@
         var d = datum,
             uid = d._tableau_.player,
             day = d._tableau_.day;
-        //TODO, depends on the projection axis
-        if( !(ctx.aggregate.days && is_days_y_axis(ctx)) ) {
-            return ctx.scaley(d._tableau_.day)
-                + ctx.rowHeight - ctx.scalenotes(d.note);
+        if( d._tableau_._day_ ) {
+            day = d._tableau_._day_.order;
         }
-        var player = playerByUID(ctx, uid);
-        // if( !player._stack_notes ) {
-        //     player._stack_notes = _build_notes_stack(ctx, uid);
-        // }
-        return playerNotesStack(ctx, player)[day].ty;
+        //TODO, depends on the projection axis
+        return ctx.scaley(day)
+            + ctx.rowHeight - ctx.scalenotes(d.note);
     }
 
 
     function playerNotesStack(ctx, player) {
-        if( !player._stack_notes ) {
-            player._stack_notes = _build_notes_stack(ctx, player.uid);
+        ctx._stacks = ctx._stacks || {};
+        if( !ctx._stacks[player.uid]) {
+            ctx._stacks[player.uid] = _build_notes_stack(ctx, player.uid);
         }
-        return player._stack_notes;
+        return ctx._stacks[player.uid];
     }
     
 
@@ -1195,8 +1372,24 @@
             stack = [], i,
             notes = player.player.notes, note,
             scalenotes = ctx.scalenotes,
-            tot = 0, ty, count = 0;
+            tot = 0, ty, count = 0, days = null;
+        if( !ctx.svg.select('.days').empty()) {
+            days = {};
+            ctx
+                .svg
+                .select('.days')
+                .selectAll('.day[opacity="1"]')
+                .data()
+                .forEach(function(d){
+                    days[d.id] = true;
+                });
+        }
         for( i = 0; i < notes.length; ++i ) {
+            if( days ) {
+                if( !(i in days)) {
+                    continue;
+                }
+            }
             note = notes[i].note;
             if( note ) {
                 tot += scalenotes(note);
@@ -1204,14 +1397,16 @@
         }
         ty = ctx.scaley(ctx.rowCount) - tot;
         for( i = 0; i < notes.length; ++i) {
-            if( i && (note = notes[i-1].note) ){
-                ty += scalenotes(note);
-                count += 1;
+            if( i && (note = notes[i-1].note)){
+                if( !days || (i in days) ) {
+                    ty += scalenotes(note);
+                    count += 1;
+                }
             }
-            stack.push({
+            stack[i] = {
                 ty:ty,
                 count: count
-            });
+            };
         }
         return stack;
     }
@@ -1281,34 +1476,61 @@
         };
     }
 
-
-    function tableau_rowHeaders(ctx, svg) {
-        var rows = [], i;
-        svg = svg || ctx.svg;
+    //generate the data for days
+    function tableau_daysData(ctx, range) {
+        var i, rows = [], order = 0;
         for(i = 0; i < ctx.data.playersAll[0].notes.length; ++i) {
+            if( range && (i < range[0] || i > range[1])) {
+                    continue;
+            }
             rows.push({
                 title: "J" + d3.format("02")(i+1),
                 id: i,
-                order: i
+                order: order++
             });
         }
         
+        return rows;
+    }
+    
+    function tableau_rowHeaders(ctx, svg) {
         svg.append('g')
             .attr('class', 'rowHeaders')
-            .selectAll('.rowTitle')
-            .data(rows)
-            .enter()
+            .call(tableau_days(ctx))
+            .selectAll('.day')
             .append('text')
             .attr('class', 'rowTitle')
             .text(function(d){
                 return d.title;
-            })
-            .attr('transform', function(d){
-                return 'translate(0, ' + ctx.scaley(d.order+1) + ')';
-            });        
+            });
     }
 
 
+    //return a generator for days
+    function tableau_days(ctx) {
+        var days;
+        return function(selection, range) {
+            days = selection
+                .selectAll('.day')
+                .data(tableau_daysData(ctx, range), function(d){
+                    return d.id;});
+            days.enter()
+                .append('g')
+                .attr('class', 'day')
+                .merge(days)
+                .attr('transform', function(d){
+                    return 'translate(0, '
+                        + ctx.scaley(d.order+1) + ')';
+                })
+                .attr('opacity', 1);
+            days.exit()
+                .attr('opacity', 0);
+            // selection.select('.day')
+            //     .call(tableau_playerSelected(ctx));
+        };
+    }
+
+    //format id to string suitable for use as html attribute id
     function uid_to_id(member){
         if( !member ) {return "";}
         if( typeof(member) == 'number') {
