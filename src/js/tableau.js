@@ -235,7 +235,8 @@
                     //indicates level of grouping: [1, 2]
                     level: 1,
                     parent: null,
-                    _initialOrder: i
+                    _initialOrder: i,
+                    hidden: true
                 };
                 groups.push(g);
                 if( prop ) {
@@ -249,6 +250,9 @@
                 x: 0,
                 y: 0
             });
+            if( !player.hidden ) {
+                g.hidden = false;
+            }
         }
         return groups;
     }
@@ -286,7 +290,7 @@
         if(!groups) {
             return;
         }
-        groups = groups.slice();
+        groups = groups.slice().filter(function(g) {return !g.hidden;});
         groups.sort(function(g1, g2){
             return g1.order - g2.order;
         });
@@ -304,7 +308,7 @@
             }
             g.posx = posx;
             //sort members
-            elements = g.elements;
+            elements = g.elements.filter(function(e){return !e.player.hidden;});
             if( !elements ) {
                 continue;
             }
@@ -415,6 +419,44 @@
         _refresh(ctx);
     }
 
+
+    function _filter(ctx, opt) {
+        opt = $.extend({
+            teams:[],
+            postes:[]
+        }, opt);
+        var i,
+            j,
+            g,
+            player,
+            anyvisible,
+            anyfilter = (opt &&
+                         (opt.teams &&opt.teams.length ||
+                          opt.postes && opt.postes.length));
+        for(i = 0; i < ctx.groups.length; ++i) {
+            g = ctx.groups[i];
+            g.hidden = anyfilter;
+        }
+        for(i = 0; i < ctx.groups.length; ++i) {
+            g = ctx.groups[i];
+            for( j = 0; j < g.elements.length; ++j){
+                player = g.elements[j].player;
+                player.hidden = anyfilter;
+                if( ((opt.teams.length == 0)
+                     || opt.teams.indexOf(player.player.team) > -1) &&
+                    (!opt.postes.length
+                     || opt.postes.indexOf(player.player.poste) > -1)) {
+                    player.hidden = false;
+                    g.hidden = false;
+                    if( g.parent ) {
+                        g.parent.hidden = false;
+                    }
+                }
+            }
+        }
+        _refresh(ctx);
+    }
+    
     //create a new group generator for players
     function tableau_groupPlayer(ctx) {
         var players = ctx.players;
@@ -431,18 +473,20 @@
                 .enter()
                 .append('g')
                 .attr('class', 'group')
-            .merge(groups)
-            .attr('transform', function(d) {
-                var x = d.x * ctx.colWidth;
-                //make space for the group title if any
-                if( _group_displayName(d) ) {
-                    x += ctx.groupHeaderWidth * (d.order + 1);
-                }
-                x = d.posx;
-                return 'translate(' + x + ', 0)';
-            })
-            .attr('id', function(d){
-                return uid_to_id(d.id);});
+                .merge(groups)
+                .attr('transform', function(d) {
+                    var x = d.x * ctx.colWidth;
+                    //make space for the group title if any
+                    if( _group_displayName(d) ) {
+                        x += ctx.groupHeaderWidth * (d.order + 1);
+                    }
+                    x = d.posx;
+                    return 'translate(' + x + ', 0)';
+                })
+                .attr('id', function(d){
+                    return uid_to_id(d.id);})
+                .attr('opacity', function(d){
+                    return d.hidden ? 0 : 1;});
             groups.exit().remove();
         };
     }
@@ -486,7 +530,9 @@
                             var x =  d.x * ctx.colWidth,
                                 y = d.y * ctx.rowHeight;
                             return 'translate(' + x + ', ' + y + ')';
-                        });
+                        })
+                        .attr('opacity', function(d){
+                            return d.player.hidden ? 0: 1;});
                     players
                         .exit()
                         .remove();
@@ -521,6 +567,88 @@
                 });
             selection.call(tableau_dots(ctx));
         };
+    }
+
+    
+    function tableau_filter(ctx) {
+        var property = 'team',
+            data = d3.nest()
+                .key(function(d){return d.player[property];})
+                .rollup(function(leaves){return leaves.length;});
+        return function(selection, prop){
+            prop = prop || 'team';
+            property = prop;
+            selection.append('h4').html(property);
+            var teams = selection
+                    .append('ul')
+                    .attr('class', 'team-filter ' + property);
+            var ul = teams;
+            teams
+                .call(li)
+                .select('a')
+                .html("Clear")
+                .on('click', function(){
+                    //reset checkboxes
+                    ul
+                        .selectAll('.team')
+                        .select('input')
+                        .property('checked', false);
+                    tableau_selectedFilter(ctx, selection);
+                });
+
+            teams = teams
+                .selectAll('.team')
+                .data(data.entries(ctx.players));
+            teams
+                .enter()
+                .append('li')
+                .attr('class', 'team')
+                .html('<a href="javascript:void(0);"></a>')
+                .select('a')
+                .on('click', function(d){
+                    if( d3.event.target.type != 'checkbox' ) {
+                        var checked = d3
+                                .select(this)
+                                .select('input')
+                                .property('checked');
+                        d3.select(this)
+                            .select('input')
+                            .property('checked', !checked);
+                    }
+                    tableau_selectedFilter(ctx, selection);
+                })
+                .html(function(d){
+                    return '<input type="checkbox">' + d.key;
+                });
+
+            function li(selection){
+                selection.append('li')
+                    .html('<a href="javascript:void(0);"></a>');
+            }
+        };
+    }
+
+    function tableau_selectedFilter(ctx, selection){
+        var selectedTeams = selection
+                .selectAll('ul.team .team')
+                .filter(function(){
+                    var input = d3.select(this).select('input');
+                    return input.size() && input.property('checked');
+                })
+                .data()
+                .map(function(d){return d.key;});
+        
+        var selectedPostes = selection
+                .selectAll('ul.poste .team')
+                .filter(function(){
+                    var input = d3.select(this).select('input');
+                    return input.size() && input.property('checked');
+                })
+                .data()
+                .map(function(d){return d.key;});
+        
+        _filter(ctx,{'teams':selectedTeams, 'postes':selectedPostes});
+        
     }
     
     //create a new axis generator for players
@@ -943,7 +1071,13 @@
         container = d3
             .select(el)
             .append('div')
+            .attr('class', 'main-container')
+            .append('div')
             .attr('class', 'tableau-container');
+        var mainContainer = d3.select(el).select('.main-container');
+        var side = mainContainer.append('div').attr('class', 'sidepanel');
+        side.call(tableau_filter(ctx));
+        side.call(tableau_filter(ctx), 'poste');
         ctx.container = container;
         var header = container
                 .append('div')
@@ -972,10 +1106,8 @@
             .append('svg')
             .attr('width', ctx.rowHeaderWidth)
             .attr('height', tableau_height(ctx));
-        ctx.svgRowHeader = d3.select(el).select('.tableau-container .east svg');
-        tableau_rowHeaders(ctx, ctx.svgRowHeader
-                           //d3.select(el).select('.tableau-container .east svg')
-                          );
+        ctx.svgRowHeader = body.select('.east svg');
+        tableau_rowHeaders(ctx, ctx.svgRowHeader);
         header = header.append('svg')
             .attr('width', svg.attr('width'))
             .attr('height', ctx.topHeaderHeight());

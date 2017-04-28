@@ -25,6 +25,13 @@
         <li><a href="#" onclick="tableau._sort($tableau[0], '>');">Descending</a></li>
       </ul>
     </div>
+    <select multiple style="display:none;">
+      {% clubsoptions stats%}
+    </select>
+    <button type="button" class="btn btn-default js-toggle-sidepanel pull-right" aria-label="Left Align">
+      <span class="glyphicon glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span>
+    </button>
+
   </div>
 </div>
 

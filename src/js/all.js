@@ -193,6 +193,10 @@ $(function(){
         });
     };
 
+    $('.js-toggle-sidepanel').on('click', function(){
+        $('.sidepanel').toggleClass('show');
+    });
+
     
     $('.js-add-player').on('click', function(event){
         var $target = event.target,
