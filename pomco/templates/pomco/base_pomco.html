@@ -6,7 +6,8 @@
 {% include 'pomco/topbar.html' %}
 {% include 'pomco/teams_drawer.html'%}
 
-{% if not user.is_authenticated %}
+
+{% if with_auth and not user.is_authenticated %}
 <div class="alert alert-warning">
   Please <a href="{% url 'signup'%}">signup</a> or <a href="{% url 'login'%}">login</a> to create your own tableau.
 </div>

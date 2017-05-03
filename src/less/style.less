@@ -18,6 +18,7 @@
 
 body {
     padding-top: 70px;
+    overflow-y:hidden;
 }
 
 /* center the logo in the topbar */
@@ -54,6 +55,7 @@ ul{
 .main-container{
     flex-direction: row;
     display: flex;
+    height:100%;
     .sidepanel{
         width: 0;
         display:none;
@@ -86,7 +88,7 @@ ul{
 .tableau-container{
     display:flex;
     flex-direction: column;
-    height: 500px;
+    height: 100%;
     flex-grow:1;
     flex-shrink:1;
     overflow-y:hidden;

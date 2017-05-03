@@ -114,8 +114,11 @@ def getcustomteamor404(team_id):
     team_id = team_id[1:]
     return get_object_or_404(Team, pk=team_id)
 
-    
-def team(request, team_id, stats=None):
+
+def tableau(request):
+    return render(request, "pomco/tableau.html")
+
+def team(request, team_id="all", stats=None):
     if stats is None:
         stats = _defaultstats(request)
         return HttpResponseRedirect(reverse('team', kwargs={'stats':stats, 'team_id':team_id}))
@@ -139,6 +142,7 @@ def team(request, team_id, stats=None):
         'detail_team_list':[team],
         'detail':True,
         'stats':stats,
+        'with_auth':False
     }
     context.update(_get_teams_lists(request, stats))
     return render(request, "pomco/team.html", context)

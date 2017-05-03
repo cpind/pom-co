@@ -137,8 +137,10 @@ $(function(){
     });
     
     adjustDrawerHeight();
+    adjustTableauHeight();
     refreshAggregates();
     $(window).resize(adjustDrawerHeight);
+    $(window).resize(adjustTableauHeight);
     
 
     $('.chosen-select')
@@ -444,6 +446,12 @@ $(function(){
         return $.fn.val.apply($('.js-search-name'), args);
     }
 
+    function adjustTableauHeight() {
+        var maxHeight;
+        maxHeight = $(window).height() - $('.js-team-aggregate').offset().top;
+        $('.js-team-aggregate').css('height', maxHeight);
+    }
+    
     //tableau
     function refreshAggregates(){
         $('.js-team-aggregate').each(function(index, el){

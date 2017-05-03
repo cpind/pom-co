@@ -6,45 +6,9 @@
          href="{% url 'index'%}">
         {% pomco_name %}</a>
     </div>
-
     {% include 'pomco/teams_button.html' %}
-    {% if user.is_authenticated %}
-    <ul class="navbar-form navbar-right">
-      <li class="dropdown">
-        <a href="#" 
-           class="dropdown-toggle btn btn-default"
-           data-toggle="dropdown"
-           role="button"
-           aria-haspopup="true"
-           aria-expanded="false">
-          {{user.get_display_name}}
-        </a>
-        <ul class="dropdown-menu">
-          <li>
-            <a href="{% url 'profile'%}">Profile</a>
-          </li>
-          <li role="separator" class="divider"></li>
-          <li>
-            <a href="{% url 'logout'%}">Logout</a>
-          </li>
-        </ul>
-      </li>
-    </ul>
-    {% else %}
-    <div class="navbar-form navbar-right">
-      <a class="btn btn-default"
-         href="{% url 'login'%}">
-        Log In 
-      </a>
-    </div>
-    <div class="navbar-form navbar-right">
-      <a class="btn btn-default"
-         href="{% url 'signup'%}">
-        Sign Up
-      </a>
-    </div>
+    {% if with_auth %}
+    {% include 'pomco/authentication_button.html'%}
     {% endif %}
-
-
   </div>
 </nav>
