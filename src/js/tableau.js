@@ -70,7 +70,7 @@
             return ctx.colHeaderHeight + (2 - ctx.groupLevel) * ctx.groupHeaderHeight;
         };
         ctx.labelAngle = -45;
-        ctx.xoffset = function(){
+        ctx.xoffset = function() {
                 return -ctx.colHeaderHeight /
                 Math.tan(ctx.labelAngle * Math.PI / 180);  
         };
@@ -640,6 +640,51 @@
         };
     }
 
+
+    function tableau_bevel(ctx) {
+        var width = 2 * ctx.colWidth;
+        return function(selection){
+            var sidepanel = selection;
+            selection
+                .style('position', 'relative')
+                .style('height', '100%')
+                .append('svg')
+                .style('position', 'absolute')
+                .style('left', -width)
+                .style('width', width)
+                .style('top', 0)
+                .style('height', '100%')
+                .call(function(selection){
+                    selection
+                        .append('path')
+                        .attr('d', d3.line()([
+                            [0, ctx.colHeaderHeight],
+                            [ 2 * ctx.colWidth, ctx.colHeaderHeight],
+                            [2 * ctx.colWidth, ctx.colHeaderHeight + (Math.tan(ctx.labelAngle * Math.PI / 180) * 2 * ctx.colWidth)]
+                        ]));
+                    selection
+                        .append('rect')
+                        .attr("width", 2 * ctx.colWidth)
+                        .attr('height', "100%")
+                        .attr('y', ctx.colHeaderHeight);
+                    selection
+                        .style('fill', '#eeeeee');
+                    
+                    selection.on('click', function(){
+                        sidepanel.classed('show', !sidepanel.classed('show'));
+                    });
+                });
+            selection
+                .append('span')
+                .attr('class', 'glyphicon glyphicon-chevron-left')
+                .style('position', 'absolute')
+                .style('left', "-16px")
+                .style('top', "65px")
+                .on('click', function(){
+                    sidepanel.classed('show', !sidepanel.classed('show'));
+                });
+        };
+    }
     
     function tableau_filter(ctx) {
         var property = 'team',
@@ -649,8 +694,17 @@
         return function(selection, prop){
             prop = prop || 'team';
             property = prop;
-            selection.append('h4').html(property);
+            selection.append('h4')
+                .append('a')
+                .attr('href', 'javascript:void(0);')
+                .attr('data-toggle', 'collapse')
+                .attr('data-target', '#section_' + prop)
+                .style('display', 'block')
+                .html(property);
             var teams = selection
+                    .append('div')
+                    .attr('id', 'section_'+prop)
+                    .attr('class', 'collapse in')
                     .append('ul')
                     .attr('class', 'team-filter ' + property);
             var ul = teams;
@@ -1232,9 +1286,17 @@
             .append('div')
             .attr('class', 'tableau-container');
         var mainContainer = d3.select(el).select('.main-container');
-        var side = mainContainer.append('div').attr('class', 'sidepanel');
+        var side = mainContainer
+                .append('div')
+                .attr('class', 'sidepanel show')
+                .append('div')
+                .attr('class', 'content')
+                .style('overflow-x', 'hidden');
         side.call(tableau_filter(ctx));
         side.call(tableau_filter(ctx), 'poste');
+        mainContainer
+            .select('.sidepanel')
+            .call(tableau_bevel(ctx));
         ctx.container = container;
         var header = container
                 .append('div')
