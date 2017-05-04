@@ -6910,7 +6910,6 @@ button.close {
 }
 body {
   padding-top: 50px;
-  overflow-y: hidden;
 }
 nav.navbar {
   margin-bottom: 0;
@@ -6973,6 +6972,9 @@ ul {
 }
 .main-container .sidepanel .glyphicon {
   transition-duration: .35s;
+}
+.main-container .sidepanel .contentWrapper {
+  overflow-x: auto;
 }
 .main-container .sidepanel .content {
   padding: 10px 10px 10px 10px;
