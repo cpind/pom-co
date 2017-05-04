@@ -17,8 +17,12 @@
 
 
 body {
-    padding-top: 70px;
+    padding-top: 50px;
     overflow-y:hidden;
+}
+
+nav.navbar{
+    margin-bottom:0;
 }
 
 /* center the logo in the topbar */
@@ -34,8 +38,12 @@ ul{
 }
 
 .js-team-aggregate{
+    display:flex;
+    flex-direction: column;
     .form-inline{
         margin-left:30px;
+        flex-grow:0;
+        flex-basis:auto;
         .dropdown{
             display:inline-block;
         }
@@ -49,13 +57,15 @@ ul{
 #slider-range{
     display: inline-block;
     width: 150px;
-    margin-left: 40px;
 }
 
 .main-container{
     flex-direction: row;
     display: flex;
-    height:100%;
+    height:0;
+    flex-grow:1;
+    flex-shrink:1;
+    
     .sidepanel{
         width: 0;
         display:flex!important;
@@ -71,7 +81,7 @@ ul{
                 transform:rotate(180deg);
             }
         }
-        ul.team-filter{
+        ul{
             li{
                 &:hover{
                     background-color:#f5f5f5;
@@ -84,6 +94,8 @@ ul{
 
         .content{
             padding:10px 10px 10px 10px;
+            overflow-x:hidden;
+            overflow-y:auto;
         }
         
         a{

@@ -28,6 +28,7 @@ $(function(){
 
     //export
     window.$tableau = $tableau;
+    window.mbt = {};
 
     //initial state
     $('.js-done').hide();
@@ -141,20 +142,37 @@ $(function(){
     refreshAggregates();
     $(window).resize(adjustDrawerHeight);
     $(window).resize(adjustTableauHeight);
-    
 
-    $('.chosen-select')
-        .chosen()
-        .change(function(e, value){
-            var val = $(e.target).val();
-            if( value.selected && val.length > 1 ) {
-                if( val.indexOf(value.selected) == 0) {
-                    val = [val[1], val[0]];
-                }
-            }
-            tableau._group($tableau[0], val);
-        })
-    ;
+    $.extend(window.mbt, {
+        chosen:function(el){
+            $(el).chosen()
+                .change(function(e, value){
+                    var val = $(e.target).val();
+                    if( value.selected && val.length > 1 ) {
+                        if( val.indexOf(value.selected) == 0) {
+                            val = [val[1], val[0]];
+                        }
+                    }
+                    $(e.target).trigger('chosen:changeInOrder',[val]);
+                });
+        }
+    });
+    // window.mbt.chosen(
+    //     $('.chosen-select'));
+    // $('.chosen-select').on('chosen:changeInOrder', function(event, val){
+    //     tableau._group($tableau[0], val);
+    // });
+    //     .chosen()
+    //     .change(function(e, value){
+    //         var val = $(e.target).val();
+    //         if( value.selected && val.length > 1 ) {
+    //             if( val.indexOf(value.selected) == 0) {
+    //                 val = [val[1], val[0]];
+    //             }
+    //         }
+    //         tableau._group($tableau[0], val);
+    //     })
+    // ;
     
     function adjustDrawerHeight(){
         var topbarHeight =
@@ -199,19 +217,6 @@ $(function(){
         $('.sidepanel').toggleClass('show');
     });
 
-
-    $('#slider-range').slider({
-        range:true,
-        min: 0,
-        max: 38,
-        values: [0,38],
-        slide: function( event, ui ) {
-            console.log(ui.values[0] + ' ' + ui.values[1]);
-            tableau._filterDays($tableau[0], ui.values);//setRenderMode($tableau[0], 'days');
-        }
-        
-    });
-    
     $('.js-add-player').on('click', function(event){
         var $target = event.target,
             jsonMembers = $target.dataset.members,
@@ -339,12 +344,6 @@ $(function(){
         
     });
 
-    $('.js-aggregate-days').on('change', function(e){
-        var target = e.target,
-            checked = $(e.target).is(':checked');
-        tableau.aggregate($tableau[0], 'days', checked);
-    });
-
     $('.js-sort-totals').on('click', function(e) {
         var target = e.target,
             checked = $(e.target).is(':checked');
@@ -447,9 +446,10 @@ $(function(){
     }
 
     function adjustTableauHeight() {
-        var maxHeight;
-        maxHeight = $(window).height() - $('.js-team-aggregate').offset().top;
-        $('.js-team-aggregate').css('height', maxHeight);
+        var maxHeight,
+            $container = $('.js-team-aggregate');
+        maxHeight = $(window).height() - $container.offset().top;
+        $container.height(maxHeight);
     }
     
     //tableau

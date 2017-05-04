@@ -4,32 +4,6 @@
 {% block content-no-container %}
 
 <div class="js-team-view js-team-aggregate" data-members='{{team.members}}'>
-  <div class="form-inline">
-    <div class="checkbox">
-      <label>
-        <input class="js-aggregate-days" type="checkbox"> Aggregate Days
-      </label>
-    </div>
-    <select data-placeholder="Group by ..." class="chosen-select" multiple style="width:170px;">
-      <option value="team">Team</option>
-      <option value="poste">Poste</option>
-    </select>
-    <div class="dropdown">
-      <button class="btn btn-default dropdown-toggle" type="button" id="sortTotalMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        Order Total
-        <span class="caret"></span>
-      </button>
-      <ul class="dropdown-menu" aria-labelledby="sortTotalMenu">
-        <li><a href="#" onclick="tableau._sort($tableau[0], null);">Initial</a></li>
-        <li><a href="#" onclick="tableau._sort($tableau[0], '<');">Ascending</a></li>
-        <li><a href="#" onclick="tableau._sort($tableau[0], '>');">Descending</a></li>
-      </ul>
-    </div>
-    <select multiple style="display:none;">
-      {% clubsoptions stats%}
-    </select> 
-    <div id="slider-range"></div>
-  </div>
 </div>
 
 {% if team.editable %}

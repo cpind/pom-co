@@ -30,7 +30,9 @@
     function context(el) {
         var ctx = $(el).data('tableau-context');
         if( !ctx ) {
-            ctx = {};
+            ctx = {
+                el:el
+            };
             $(el).data('tableau-context', ctx);
         }
         return ctx;
@@ -685,49 +687,120 @@
                 });
         };
     }
-    
-    function tableau_filter(ctx) {
-        var property = 'team',
-            data = d3.nest()
-                .key(function(d){return d.player[property];})
-                .rollup(function(leaves){return leaves.length;});
-        return function(selection, prop){
-            prop = prop || 'team';
-            property = prop;
+
+    function tableau_paramSectionTitle(ctx) {
+        return function(selection, title){
             selection.append('h4')
                 .append('a')
                 .attr('href', 'javascript:void(0);')
                 .attr('data-toggle', 'collapse')
-                .attr('data-target', '#section_' + prop)
+                .attr('data-target', '#section_' + title.split(' ')[0])
                 .style('display', 'block')
-                .html(property);
-            var teams = selection
-                    .append('div')
-                    .attr('id', 'section_'+prop)
-                    .attr('class', 'collapse in')
-                    .append('ul')
-                    .attr('class', 'team-filter ' + property);
-            var ul = teams;
-            teams
-                .call(li)
-                .select('a')
-                .html("Clear")
-                .on('click', function(){
-                    //reset checkboxes
-                    ul
-                        .selectAll('.team')
-                        .select('input')
-                        .property('checked', false);
-                    tableau_selectedFilter(ctx, selection);
-                });
+                .html(title);
+        };
+    }
 
-            teams = teams
-                .selectAll('.team')
-                .data(data.entries(ctx.players));
-            teams
-                .enter()
+    function tableau_params(ctx) {
+        var title = tableau_paramSectionTitle(ctx),
+            content = tableau_paramSectionContent(ctx);
+        return function(selection){
+            selection
+                .call(title, 'Aggregate')
+                .call(function(sel){
+                    sel
+                        .call(content, 'Aggregate');
+                    sel
+                        .select('#section_Aggregate')
+                        .append('ul')
+                        .call(function(selection){
+                            selection
+                                .append('li')
+                                .call(tableau_paramCheckboxItem(ctx), 'days')
+                                .select('a')
+                                .on('click.action', function(d){
+                                    return _aggregate(ctx.el, 'days', d3.select(this).select('input').property('checked'));
+                                });
+                            //TODO
+                            // selection
+                            //     .append('li')
+                            //     .call(tableau_paramCheckboxItem(ctx), 'player');
+                        });
+                })
+                .call(title, 'Group by')
+                .call(content, 'Group by')
+                .call(function(selection){
+                    selection
+                        .select('#section_Group')
+                        .html('<select data-placeholder="Group by ..." class="chosen-select" multiple style="width:170px;">'
+                                +'<option value="team">Team</option>'
+                                +'<option value="poste">Poste</option>'
+                              + '</select>');
+                    var el = selection.select('select').node();
+                    window.mbt.chosen(el);
+                    $(el).on('chosen:changeInOrder', function(event, val){
+                        _group(ctx.el, val);
+                    });
+                })
+                .call(title, 'Sort')
+                .call(content, 'Sort')
+                .call(function(selection){
+                    var item = tableau_paramItem(ctx);
+                    selection = selection.select('#section_Sort')
+                        .append('ul');
+                    selection
+                        .call(item, 'Ascending',
+                              {'click': function(){return _sort(ctx.el, '<');}});
+                    selection
+                        .call(item, 'Descending', {'click': function(){return _sort(ctx.el, '>');}});
+                    selection
+                        .call(item, 'Initial',{'click':function(){return _sort(ctx.el, null);}});
+                    ;
+                    // selection
+                    //     .call();
+                })
+                .call(title, 'Days')
+                .call(content, 'Days')
+                .call(function(selection){
+                    selection = selection
+                        .select('#section_Days')
+                        .append('div')
+                        .attr('id', 'slider-range');
+                    $(selection.node()).slider({
+                        range:true,
+                        min: 0,
+                        max: 38,
+                        values: [0,38],
+                        slide: function( event, ui ) {
+                            _filterDays(ctx.el, ui.values);
+                        }
+                        
+                    });
+                })
+                .call(tableau_filter(ctx))
+                .call(tableau_filter(ctx), 'poste');
+        };
+    }
+
+    function tableau_paramItem(ctx) {
+        return function(selection, title, opt){
+            opt = $.extend({}, opt);
+            selection
                 .append('li')
-                .attr('class', 'team')
+                .html('<a href="javascript:void(0);"></a>')
+                .select('a')
+                .html(title)
+                .call(function(selection){
+                    if( !opt.click) {return;}
+                    selection.on('click', opt.click);
+                })
+            ;
+        };
+    }
+
+    
+    function tableau_paramCheckboxItem(ctx) {
+        return function(selection, title) {
+            selection
                 .html('<a href="javascript:void(0);"></a>')
                 .select('a')
                 .on('click', function(d){
@@ -740,18 +813,72 @@
                             .select('input')
                             .property('checked', !checked);
                     }
-                    tableau_selectedFilter(ctx, selection);
                 })
-                .html(function(d){
-                    return '<input type="checkbox">' + d.key;
-                });
-
-            function li(selection){
-                selection.append('li')
-                    .html('<a href="javascript:void(0);"></a>');
-            }
+                .html('<input type="checkbox">' + title);
         };
     }
+
+    function tableau_paramSectionContent(ctx) {
+        return function(selection, title){
+            //for "group by" case
+            title = title.split(' ')[0];
+            selection
+                .append('div')
+                .attr('id', 'section_'+title)
+                .attr('class', 'collapse in');
+        };
+    }
+    
+    function tableau_filter(ctx) {
+        var property = 'team',
+            data = d3.nest()
+                .key(function(d){return d.player[property];})
+                .rollup(function(leaves){return leaves.length;});
+        return function(selection, prop){
+            prop = prop || 'team';
+            property = prop;
+            selection
+                .call(tableau_paramSectionTitle(ctx), property);
+            selection
+                .call(tableau_paramSectionContent(ctx), property);
+            var teams = selection
+                    .select('#section_'+property)
+                    .append('ul')
+                    .attr('class', 'team-filter ' + property);
+            var ul = teams;
+            teams
+                .call(tableau_paramItem(ctx), 'Clear')
+                .select('a')
+                .on('click', function(){
+                    //reset checkboxes
+                    ul
+                        .selectAll('.team')
+                        .select('input')
+                        .property('checked', false);
+                    tableau_selectedFilter(ctx, selection);
+                });
+            teams = teams
+                .selectAll('.team')
+                .data(data.entries(ctx.players));
+            teams
+                .enter()
+                .each(function(d){
+                    var sel = d3.select(this);
+                    sel
+                        .append('li')
+                        .attr('class', 'team')
+                        .call(tableau_paramCheckboxItem(ctx), d.key)
+                        .select('a')
+                        .on('click.selectfilter', function(d){
+                            tableau_selectedFilter(ctx, selection);
+                        });
+                });
+
+        };
+    }
+
+
+    
 
     function tableau_selectedFilter(ctx, selection){
         var selectedTeams = selection
@@ -1290,10 +1417,9 @@
                 .append('div')
                 .attr('class', 'sidepanel show')
                 .append('div')
-                .attr('class', 'content')
-                .style('overflow-x', 'hidden');
-        side.call(tableau_filter(ctx));
-        side.call(tableau_filter(ctx), 'poste');
+                .attr('class', 'content');
+        side.call(tableau_params(ctx));
+//        side.call(tableau_filter(ctx), 'poste');
         mainContainer
             .select('.sidepanel')
             .call(tableau_bevel(ctx));
