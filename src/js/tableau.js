@@ -1,4 +1,3 @@
-
 (function(){
 
     //EXPORTS
@@ -45,8 +44,8 @@
         ctx.colWidth = 10;
         ctx.players = [];
         ctx.trimData = true;
-        ctx.rowCount = 38;
         ctx.data = opt.data;
+        ctx.rowCount = _last_days(ctx);
         ctx.colCount = ctx.data.playersAll.length;
         ctx.width = ctx.colCount * ctx.colWidth;
         ctx.rowHeaderWidth = 30;
@@ -56,8 +55,7 @@
 	    .range([0, ctx.width]);
         ctx.scaley = d3.scaleLinear()
             .domain([0, ctx.rowCount])
-            .range([0,
-                    tableau_height(ctx)]);
+            .range([ctx.rowCount, tableau_height(ctx)]);
         ctx.aggregate = {players:false, days:false};
         ctx.teams = [];
         ctx.noteScale = tableau_scaleNote(ctx);
@@ -117,6 +115,20 @@
         return ctx.rowCount * ctx.rowHeight;
     }
 
+
+    function tableau_numericScaleNotes(ctx) {
+        if( !ctx.aggregate.days ) {
+            return d3.scaleLinear()
+	        .domain([0, 9])
+	        .range([0, ctx.rowHeight - 2]);
+        }
+        var rowCount = _days_count(ctx);
+        return d3.scaleLinear()
+            .domain([0, 9 * rowCount])
+            .range([rowCount * ctx.rowHeight, 0]);
+    }
+
+    
     //ie aggregate(el, 'player', true)
     //ie aggregate(el, 'day', true)
     //aggregate depends on the grouping and the axis each entity is in
@@ -152,45 +164,39 @@
                         this.scrollTop,
                         this.scrollTop + delta);
                     return function(t) {
+                        return;
                         ctx.body.node().scrollTop = i(t);
                     };
                 });
             newheight = tableau_height(ctx);
-        } 
+        }
+        var agg = tableau_aggregate(ctx);
         ctx.svg
             .select('.players')
-            .transition(t)
-            .attr('transform','translate(0, '
-                  + (newheight - tableau_height(ctx) )
-                  + ')');
-        ctx.svg
-            .transition(t)
-            .attr('height', newheight);
-        ctx.svgRowHeader
-            .transition(t)
-            .attr('height', newheight);
-        var playerStacks = {};
-        ctx.svg
-            .select('.players')
-            .selectAll('.note[opacity="1"]')
-            .transition(t)
-            .delay(function(d){
-                var p = d._tableau_.playerData,
-                    day = d._tableau_.day,
-                    count = playerNotesStack(ctx, p.player)[day].count;
-                return (p.globalNotesCount + count) * (t.duration() / 500);
-            })
-            .style('fill', ctx.noteScale)
-            .attr('y', tableau_notey(ctx));
+            .call(function(selection){
+                selection
+                    .selectAll('.note[opacity="0"]')
+                    .style('fill', ctx.noteScale);
+                selection
+                    .selectAll('.note[opacity="1"]')
+                    .transition(t)
+                    .style('fill', ctx.noteScale)
+                    .on("end",function(){
+                        d3.select(this)
+                            .call(agg);
+                    });
+            });
         ctx.svg
             .selectAll('.dots')
             .attr('display', ctx.aggregate.days ? "none" : true);
         if( ctx.aggregate.days ) {
+            //update axis
             var scale = d3.scaleLinear()
                     .domain([0, 9 * ctx.rowCount])
-                    .range([newheight, 0]);
+                    .range([tableau_height(ctx), 0]);
+            
             var axis = d3
-                    .axisLeft(scale)
+                    .axisLeft(tableau_numericScaleNotes(ctx))
                     .tickSize(5);
             ctx.svgRowHeader
                 .select('.axis.y')
@@ -206,6 +212,24 @@
             .attr('display', (!ctx.aggregate.days) ? "none":true);
     }
 
+
+    function tableau_aggregate(ctx) {
+        var notey = tableau_notey(ctx), duration = 550;
+        return function(selection) {
+            selection
+                .transition()
+                .duration(duration)
+                .delay(function(d){
+                    var p = d._tableau_.playerData,
+                        day = d._tableau_.day,
+                        count = playerNotesStack(ctx, p.player)[day].count,
+                        t = d3.active(this);
+                    return (p.globalNotesCount + count) * (duration / 500);
+                })
+                .attr('y', notey);
+        };
+    }
+    
 
     function _maxSumNotes(ctx) {
         var max, i, n;//adjust the viewport
@@ -575,25 +599,44 @@
 
 
     function tableau_notey(ctx) {
-        var playerStacks = {};
+        var playerStacks = {},
+            _stack = _build_global_notes_stack(ctx),
+            days = {};
+        tableau_daysData(ctx)
+            .forEach(function(d){
+                days[d.id] = d;
+            });
         return function(d) {
             var y;
             if( ctx.aggregate.days ) {
                 var player = playerByUID(ctx, d._tableau_.player),
-                    stack = playerNotesStack(ctx, player),//playerStacks[player.uid],
                     day = d._tableau_.day,
-                    uid = player.uid;
-                if( !stack) {
-                    stack = _build_notes_stack(ctx, uid);
-                    playerStacks[uid] = stack;
-                }
-                y =  stack[day].ty;
+                    uid = player.uid,
+                    s = _stack[day];
+                y = s[ctx.data.players[uid]];
+                y = y[1];
             } else {
+                if( !d._tableau_._day_) {
+                    d._tableau_._day_ = days[d._tableau_.day];
+                }
                 y = tableau_player_ty(ctx, d);
             }
             return y;
         };
     }
+
+    
+    function tableau_player_ty(ctx, datum) {
+        var d = datum,
+            uid = d._tableau_.player,
+            day = d._tableau_.day;
+        if( d._tableau_._day_ ) {
+            day = d._tableau_._day_.order;
+        }
+        return ctx.scaley(day)
+             - ctx.scalenotes(d.note);
+    }
+
     
     function tableau_notes(ctx) {
         return function(selection, day){
@@ -642,7 +685,7 @@
                 })
                 .style('fill', ctx.noteScale)
                 .attr('y', function(d) {
-                    var y;// =  tableau_player_ty(ctx, d);
+                    var y;
                     if( day && !Array.isArray(day) ) {
                         return 0;
                     }
@@ -782,8 +825,8 @@
                     $(selection.node()).slider({
                         range:true,
                         min: 0,
-                        max: 38,
-                        values: [0,38],
+                        max: ctx.rowCount,
+                        values: [0,ctx.rowCount],
                         slide: function( event, ui ) {
                             _filterDays(ctx.el, ui.values);
                         }
@@ -1193,8 +1236,23 @@
             svg = ctx.svg,
             players = svg.select('.players'),
             days = ctx.svg.select('.days');
+        ctx
+            .svgRowHeader
+            .select('.rowHeaders')
+            .call(tableau_days(ctx), range);
         if( ctx.aggregate.days ) {
             //todo
+            ctx.range = range;
+            var agg = tableau_aggregate(ctx);
+            ctx.svg.select('.players')
+                .selectAll('.note')
+                .attr('opacity', function(d){
+                    var day = d._tableau_.day,
+                        outside = (day < range[0] || day > range[1]);
+                    return outside ? 0: 1;
+                })
+                .filter(function(){return d3.select(this).attr('opacity') > 0;})
+                .call(agg);
         } else {
             //should be moved into tableau_select(ctx), 'day'
             if(players.attr('display') != "none"){
@@ -1237,10 +1295,6 @@
                     }
                     return tr;
                 });
-            ctx
-                .svgRowHeader
-                .select('.rowHeaders')
-                .call(tableau_days(ctx), range);
         }
     }
 
@@ -1452,7 +1506,7 @@
             teams[player.team] = 1;
         }
         _initTeams(ctx);
-        ctx.rowCount = ctx.data.playersAll[0].notes.length;
+        ctx.rowCount = _last_days(ctx);
         container = d3
             .select(el)
             .append('div')
@@ -1527,6 +1581,23 @@
         ;
     }
 
+    function _last_days(ctx) {
+        var players = ctx.data.playersAll, n = players[0].notes.length;
+        for( var i = 0; i < players[0].notes.length; ++i ){
+            for( var j = 0, p; j < players.length; ++j ) {
+                p = players[j];
+                if( p.notes[i].note ) {
+                    break;
+                }
+            }
+            if( j == players.length ) {
+                return i;
+            }
+        }
+        return n - 1;
+    }
+
+    
     function _notes_data(ctx, opt) {
         opt = $.extend({
             player:null,
@@ -1582,19 +1653,6 @@
     }
     
     
-    function tableau_player_ty(ctx, datum) {
-        var d = datum,
-            uid = d._tableau_.player,
-            day = d._tableau_.day;
-        if( d._tableau_._day_ ) {
-            day = d._tableau_._day_.order;
-        }
-        //TODO, depends on the projection axis
-        return ctx.scaley(day)
-            + ctx.rowHeight - ctx.scalenotes(d.note);
-    }
-
-
     function playerNotesStack(ctx, player) {
         ctx._stacks = ctx._stacks || {};
         if( !ctx._stacks[player.uid]) {
@@ -1603,7 +1661,86 @@
         return ctx._stacks[player.uid];
     }
 
+    //return visible players
+    function _players(ctx) {
+        var players = [];
+        if( ctx.svg.selectAll('.players').empty()) {
+            return null;
+        }
+        ctx
+            .svgHeader
+            .select('.players')
+            .selectAll('.player[opacity="1"]')
+            .data()
+            .forEach(function(d){
+                players.push(d.player.uid);
+            });
+        return players;        
+    }
 
+
+    function _days_count(ctx) {
+        var days = _days(ctx);
+        if( !days ) {
+            return _last_days(ctx);
+        }
+        return days.length;
+    }
+    
+    //returns visible days, null if all are visible
+    function _days(ctx) {
+        var days = [];
+        ctx
+            .svgRowHeader
+            .selectAll('.day[opacity="1"]')
+            .data()
+            .forEach(function(d){
+                days.push(d);
+            });
+        return days;
+    }
+    
+    function _build_global_notes_stack(ctx) {
+        var days = _days(ctx),
+            scalenotes = ctx.scalenotes,
+            rowCount = _days_count(ctx);
+        if( ctx.range ) {
+            days = tableau_daysData(ctx, ctx.range);
+        }
+        scalenotes = tableau_numericScaleNotes(ctx);
+        // d3.scaleLinear()
+        //     .domain([0, 9 * rowCount])
+        //     .range([rowCount * ctx.rowHeight, 0]);
+        //get data filtered by days
+        var stack = d3.stack()
+            .keys(days)
+            .value(function(d, key){
+                var n = d.notes[key.id].note;
+                if( isNaN(n) ) return 0;
+                return n;
+            })
+            .order(function(series){
+                var n = series.length, o = new Array(n);
+                while (--n >= 0) o[n] = series.length - 1 - n;
+                return o;
+            })
+            .offset(function(series, order){
+                d3.stackOffsetNone(series, order);
+                for( var i = 0, s, m = series[0].length; i < series.length; ++i) {
+                    s = series[i];
+                    for( var j = 0, x; j < m; ++j) {
+                        x = s[j];
+                        s[j] = [scalenotes(s[j][0]), scalenotes(s[j][1])];
+                    }
+                }
+            })
+        (ctx.data.playersAll);
+        var res = [];
+        stack.forEach(function(serie, i) {
+            res[days[i].id] = serie;
+        });
+        return res;
+    }
 
     function _build_notes_stack(ctx, uid) {
         var player = playerByUID(ctx, uid),
@@ -1613,14 +1750,9 @@
             tot = 0, ty, count = 0, days = null;
         if( !ctx.svg.select('.days').empty()) {
             days = {};
-            ctx
-                .svg
-                .select('.days')
-                .selectAll('.day[opacity="1"]')
-                .data()
-                .forEach(function(d){
-                    days[d.id] = true;
-                });
+            _days(ctx).forEach(function(d){
+                days[d.id] = true;
+            });
         }
         for( i = 0; i < notes.length; ++i ) {
             if( days ) {
@@ -1649,19 +1781,6 @@
         return stack;
     }
 
-
-    function tableau_selection_notes_transform(ctx) {
-        return function(selection) {
-            var tx, ty;
-            selection
-                .attr('transform', function(d){
-                    tx = tableau_player_tx(ctx, d._tableau_.player);
-                    ty = tableau_player_ty(ctx, d);
-                    return 'translate(' + tx + ','
-                        +  ty + ')';
-                });
-        };
-    }
     
     function _build_players_x_(ctx) {
         //fix ordering
@@ -1717,11 +1836,11 @@
     //generate the data for days
     function tableau_daysData(ctx, range) {
         var i, rows = [], order = 0;
-        for(i = 0; i < ctx.data.playersAll[0].notes.length; ++i) {
+        for(i = ctx.rowCount; i > -1; --i) {
             if( range && (i < range[0] || i > range[1])) {
                     continue;
             }
-            rows.push({
+            rows.push( {
                 title: "J" + d3.format("02")(i+1),
                 id: i,
                 order: order++
@@ -1758,7 +1877,7 @@
                 .merge(days)
                 .attr('transform', function(d){
                     return 'translate(0, '
-                        + ctx.scaley(d.order+1) + ')';
+                        + ctx.scaley(d.order) + ')';
                 })
                 .attr('opacity', 1);
             days.exit()

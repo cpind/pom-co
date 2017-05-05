@@ -32,7 +32,7 @@
         for(i = 0; i < players.length; ++i ) {
             p = players[i];
             uid = p.uid;
-            playersIndex[uid] = p;
+            playersIndex[uid] = i;
         }
         teams = data.teams;
     };
