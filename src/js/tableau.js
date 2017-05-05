@@ -129,7 +129,7 @@
         ctx.svg.call(tableau_select(ctx), 'player');
         if( entity == 'players') {
             ctx.aggregate.players = val;
-        }
+        } else 
         if( entity == 'days') {
             ctx.aggregate.days = val;
         }
@@ -181,7 +181,7 @@
                 return (p.globalNotesCount + count) * (t.duration() / 500);
             })
             .style('fill', ctx.noteScale)
-            .attr('transform', tableau_noteTransform(ctx));
+            .attr('y', tableau_notey(ctx));
         ctx.svg
             .selectAll('.dots')
             .attr('display', ctx.aggregate.days ? "none" : true);
@@ -197,6 +197,7 @@
                 .call(axis)
                 .attr('transform', 'translate(' + ctx.rowHeaderWidth + ', 0)');
         }
+        //swith days / notes axis
         ctx.svgRowHeader
             .select('.rowHeaders')
             .attr('display', ctx.aggregate.days ? "none":true);
@@ -507,7 +508,8 @@
     //create a new generator for players
     function tableau_player(ctx) {
         var players;
-        return function(selection){
+        return function(selection, opt){
+            opt = opt || {};
             selection
                 .call(tableau_groupPlayer(ctx))
                 .selectAll('.group')
@@ -528,7 +530,11 @@
                             return 'translate(' + x + ', ' + y + ')';
                         })
                         .attr('opacity', function(d){
-                            return d.player.hidden ? 0: 1;});
+                            if( opt.hide ) {
+                                return 0;
+                            }
+                            return d.player.hidden ? 0: 1;
+                        });
                     players
                         .exit()
                         .remove();
@@ -567,9 +573,10 @@
         };
     }
 
-    function tableau_noteTransform(ctx) {
+
+    function tableau_notey(ctx) {
         var playerStacks = {};
-        return function(d){
+        return function(d) {
             var y;
             if( ctx.aggregate.days ) {
                 var player = playerByUID(ctx, d._tableau_.player),
@@ -584,7 +591,7 @@
             } else {
                 y = tableau_player_ty(ctx, d);
             }
-            return 'translate(0, ' + y + ')';
+            return y;
         };
     }
     
@@ -610,7 +617,8 @@
                         });
                         return data;
                     }, function(d){return d._tableau_.day;});
-            var notetransform = tableau_noteTransform(ctx);
+            var 
+                notey = tableau_notey(ctx);
             notes
                 .enter()
                 .append('rect')
@@ -633,15 +641,14 @@
                     return 1;
                 })
                 .style('fill', ctx.noteScale)
-                .attr('transform', function(d){
+                .attr('y', function(d) {
                     var y;// =  tableau_player_ty(ctx, d);
                     if( day && !Array.isArray(day) ) {
-                        return 'translate(0, 0)';
+                        return 0;
                     }
-                    return notetransform(d);
-                })
-//                .attr('transform', tableau_noteTransform(ctx))
-            ;
+                    return notey(d);
+                    
+                });
             notes.exit()
                 .attr('opacity', function(){
                     return 0;
@@ -1083,9 +1090,29 @@
         //TODO: fix sorting group
         //TODO: figure out how sorting group is supposed to behave
         //        _sortItems(ctx, ctx.groups, opt);
+        
+        var t = d3.transition()
+                .duration(550);
         ctx.svg.call(tableau_select(ctx), 'player');
-        ctx.svg.call(tableau_player(ctx));
-        ctx.svgHeader.call(tableau_player(ctx));
+        ctx.svg.call(tableau_player(ctx), {hide:true});
+        ctx.svgHeader.call(tableau_player(ctx), {hide:true});
+        ctx.svg.select('.players').selectAll('.players > .group').selectAll('.player')
+            .each(function(d){ d._ctm_e = this.getCTM().e;})
+            .sort(function(a,b){
+                return a._ctm_e - b._ctm_e;})
+            .transition(t)
+            .delay(function(d, i){
+                return i * t.duration() / 100;
+            })
+            .tween('showHeader', function(){
+                var self = d3.select(this);
+                var i = d3.interpolateNumber(0, 1);
+                return function(t) {
+                    if( !t ) return;
+                    self.attr('opacity', i(t));
+                    ctx.svgHeader.select('#' + self.attr('id')).attr('opacity', i(t));
+                };
+            });
     }
 
     function _sortItems(ctx, items, opt) {
@@ -1179,7 +1206,7 @@
                         .attr('class', 'listener');
                 }
                 days
-                    .call(tableau_days(ctx), range)
+                    .call(tableau_days(ctx))
                     .selectAll('.day')
                     .attr('transform', function(d){
                         var tr = d3.select(this).attr('transform'),
@@ -1265,6 +1292,19 @@
             .select('.players')
             .call(tableau_notes(ctx))
             .call(tableau_dots(ctx));
+        //update width
+        var rightMax = -10000, leftMin = 10000;
+        ctx.svgHeader.selectAll('.group')
+            .selectAll('.player[opacity="1"]')
+            .each(function(){
+                var box = this.getBoundingClientRect(),
+                    right = box.right;
+                rightMax = Math.max(rightMax, right);
+                leftMin = Math.min(leftMin, box.left);
+            });
+        var width = rightMax - leftMin + 30;
+        ctx.svg.attr('width', width);
+        ctx.svgHeader.attr('width', width);
     }
     
 
@@ -1391,7 +1431,6 @@
             .domain(ctx.teams);
         
     }
-
 
     function init(el, opt){
         var ctx = context(el),
