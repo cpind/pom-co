@@ -55,7 +55,7 @@
 	    .range([0, ctx.width]);
         ctx.scaley = d3.scaleLinear()
             .domain([0, ctx.rowCount])
-            .range([ctx.rowCount, tableau_height(ctx)]);
+            .range([tableau_height(ctx), ctx.rowCount]);
         ctx.aggregate = {players:false, days:false};
         ctx.teams = [];
         ctx.noteScale = tableau_scaleNote(ctx);
@@ -123,6 +123,7 @@
 	        .range([0, ctx.rowHeight - 2]);
         }
         var rowCount = _days_count(ctx);
+        rowCount = ctx.rowCount;
         return d3.scaleLinear()
             .domain([0, 9 * rowCount])
             .range([rowCount * ctx.rowHeight, 0]);
@@ -155,19 +156,6 @@
         if( !ctx.aggregate.days ) {
             var delta = tableau_height(ctx) - newheight;
             ctx.noteScale = tableau_scaleNote(ctx);
-            ctx
-                .body
-                .transition(t)
-            //credits to http://bl.ocks.org/humbletim/5507619
-                .tween("scrollTween", function(){
-                    var i = d3.interpolateNumber(
-                        this.scrollTop,
-                        this.scrollTop + delta);
-                    return function(t) {
-                        return;
-                        ctx.body.node().scrollTop = i(t);
-                    };
-                });
             newheight = tableau_height(ctx);
         }
         var agg = tableau_aggregate(ctx);
@@ -194,7 +182,6 @@
             var scale = d3.scaleLinear()
                     .domain([0, 9 * ctx.rowCount])
                     .range([tableau_height(ctx), 0]);
-            
             var axis = d3
                     .axisLeft(tableau_numericScaleNotes(ctx))
                     .tickSize(5);
@@ -598,11 +585,19 @@
     }
 
 
+    function _day_order(ctx, day) {
+        var range = ctx.range;
+        if( !range ) {
+            return day;
+        }
+        return day - range[0];
+    }
+    
     function tableau_notey(ctx) {
         var playerStacks = {},
             _stack = _build_global_notes_stack(ctx),
             days = {};
-        tableau_daysData(ctx)
+        tableau_daysData(ctx, ctx.range)
             .forEach(function(d){
                 days[d.id] = d;
             });
@@ -613,8 +608,13 @@
                     day = d._tableau_.day,
                     uid = player.uid,
                     s = _stack[day];
+                if( !s ) {
+                    return 0;
+                }
                 y = s[ctx.data.players[uid]];
                 y = y[1];
+                //todo clean saving of days order
+                d._tableau_._day_ = days[d._tableau_.day];
             } else {
                 if( !d._tableau_._day_) {
                     d._tableau_._day_ = days[d._tableau_.day];
@@ -634,7 +634,7 @@
             day = d._tableau_._day_.order;
         }
         return ctx.scaley(day)
-             - ctx.scalenotes(d.note);
+            - ctx.scalenotes(d.note);
     }
 
     
@@ -659,9 +659,8 @@
                             day: day
                         });
                         return data;
-                    }, function(d){return d._tableau_.day;});
-            var 
-                notey = tableau_notey(ctx);
+                    }, function(d){ return d._tableau_.day;} );
+            var notey = tableau_notey(ctx);
             notes
                 .enter()
                 .append('rect')
@@ -1227,7 +1226,6 @@
         }
         //TODO implement other filters
         return false;
-
     }
 
     
@@ -1236,23 +1234,51 @@
             svg = ctx.svg,
             players = svg.select('.players'),
             days = ctx.svg.select('.days');
-        ctx
-            .svgRowHeader
-            .select('.rowHeaders')
+        ctx.svgRowHeader.select('.rowHeaders')
             .call(tableau_days(ctx), range);
         if( ctx.aggregate.days ) {
-            //todo
             ctx.range = range;
             var agg = tableau_aggregate(ctx);
             ctx.svg.select('.players')
-                .selectAll('.note')
-                .attr('opacity', function(d){
-                    var day = d._tableau_.day,
-                        outside = (day < range[0] || day > range[1]);
-                    return outside ? 0: 1;
-                })
-                .filter(function(){return d3.select(this).attr('opacity') > 0;})
-                .call(agg);
+                .call(function(selection){
+                    selection.selectAll('.note[opacity="1"]')
+                        .call(opacity);
+                    var notey = tableau_notey(ctx), duration = 550;
+                    selection
+                        .selectAll('.note')
+                        .filter(function(d){
+                            return selected(d);
+                        })
+                        .call(function(selection){
+                            selection                    
+                                .transition()
+                                .duration(duration)
+                                .delay(function(d){
+                                    var p = d._tableau_.playerData,
+                                        day = d._tableau_.day,
+                                        count = playerNotesStack(ctx, p.player)[day].count,
+                                        t = d3.active(this);
+                                    return (p.globalNotesCount + count) * (duration / 500);
+                                })
+                                .attr('y', notey)
+                                .on('end',  function(d){
+                                    if( selected(d)) {
+                                        d3.select(this).attr('opacity', 1);
+                                    }
+                                });
+                        });
+
+                    function selected(d) {
+                        var day = d._tableau_.day;
+                        return !(day < ctx.range[0] || day > ctx.range[1]);
+                    }
+                    
+                    function opacity(selection){
+                        selection.attr('opacity', function(d){
+                            return selected(d) ? 1: 0;
+                        });
+                    }
+                });
         } else {
             //should be moved into tableau_select(ctx), 'day'
             if(players.attr('display') != "none"){
@@ -1505,6 +1531,7 @@
             ctx.players.push(info);
             teams[player.team] = 1;
         }
+        _sortItems(ctx, ctx.players, '>');
         _initTeams(ctx);
         ctx.rowCount = _last_days(ctx);
         container = d3
@@ -1522,7 +1549,6 @@
                 .append('div')
                 .attr('class', 'content');
         side.call(tableau_params(ctx));
-//        side.call(tableau_filter(ctx), 'poste');
         mainContainer
             .select('.sidepanel')
             .call(tableau_bevel(ctx));
@@ -1594,7 +1620,7 @@
                 return i;
             }
         }
-        return n - 1;
+        return n;
     }
 
     
@@ -1697,6 +1723,7 @@
             .forEach(function(d){
                 days.push(d);
             });
+        days.sort(function(a, b){return a.order - b.order;});
         return days;
     }
     
@@ -1704,13 +1731,10 @@
         var days = _days(ctx),
             scalenotes = ctx.scalenotes,
             rowCount = _days_count(ctx);
-        if( ctx.range ) {
-            days = tableau_daysData(ctx, ctx.range);
-        }
+        // if( ctx.range ) {
+        //     days = tableau_daysData(ctx, ctx.range);
+        // }
         scalenotes = tableau_numericScaleNotes(ctx);
-        // d3.scaleLinear()
-        //     .domain([0, 9 * rowCount])
-        //     .range([rowCount * ctx.rowHeight, 0]);
         //get data filtered by days
         var stack = d3.stack()
             .keys(days)
@@ -1718,11 +1742,6 @@
                 var n = d.notes[key.id].note;
                 if( isNaN(n) ) return 0;
                 return n;
-            })
-            .order(function(series){
-                var n = series.length, o = new Array(n);
-                while (--n >= 0) o[n] = series.length - 1 - n;
-                return o;
             })
             .offset(function(series, order){
                 d3.stackOffsetNone(series, order);
@@ -1836,7 +1855,7 @@
     //generate the data for days
     function tableau_daysData(ctx, range) {
         var i, rows = [], order = 0;
-        for(i = ctx.rowCount; i > -1; --i) {
+        for(i = 0; i < ctx.rowCount; ++i) {
             if( range && (i < range[0] || i > range[1])) {
                     continue;
             }
@@ -1848,6 +1867,15 @@
         }
         
         return rows;
+    }
+
+    function _day(i, order){
+        if( order == null) { order = i; }
+        return {
+            title: "J" + d3.format("02")(i+1),
+            id: i,
+            order: order
+        };
     }
     
     function tableau_rowHeaders(ctx, svg) {
